@@ -8,9 +8,7 @@ import {
   getSettings,
   getProviderNodes,
 } from "@/lib/localDb";
-import { extractApiKey, isValidApiKey } from "@/sse/services/auth";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { isAuthenticated } from "@/shared/utils/apiAuth";
 import { getAllEmbeddingModels } from "@omniroute/open-sse/config/embeddingRegistry.ts";
 import { getAllImageModels } from "@omniroute/open-sse/config/imageRegistry.ts";
 import { getAllRerankModels } from "@omniroute/open-sse/config/rerankRegistry.ts";
@@ -113,35 +111,7 @@ export async function GET(request: Request) {
       settings = await getSettings();
     } catch {}
     if (settings.requireAuthForModels === true) {
-      // Check authentication: API key OR dashboard session (JWT cookie)
-      // Supports dual auth: Bearer token for external clients, cookie for dashboard.
-      let isAuthenticated = false;
-
-      // 1. Check API key (for external clients)
-      const apiKey = extractApiKey(request);
-      if (apiKey && (await isValidApiKey(apiKey))) {
-        isAuthenticated = true;
-      }
-
-      // 2. Check JWT cookie (for dashboard session)
-      // The auth_token cookie has sameSite:lax + httpOnly, which already
-      // prevents cross-origin abuse — no additional origin check needed.
-      // Same pattern as shared/utils/apiAuth.ts verifyAuth().
-      if (!isAuthenticated && process.env.JWT_SECRET) {
-        try {
-          const cookieStore = await cookies();
-          const token = cookieStore.get("auth_token")?.value;
-          if (token) {
-            const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-            await jwtVerify(token, secret);
-            isAuthenticated = true;
-          }
-        } catch {
-          // Invalid/expired token or cookies not available — not authenticated
-        }
-      }
-
-      if (!isAuthenticated) {
+      if (!(await isAuthenticated(request))) {
         return Response.json(
           {
             error: {

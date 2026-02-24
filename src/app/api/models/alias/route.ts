@@ -2,43 +2,13 @@ import { NextResponse } from "next/server";
 import { getModelAliases, setModelAlias, deleteModelAlias, isCloudEnabled } from "@/models";
 import { getConsistentMachineId } from "@/shared/utils/machineId";
 import { syncToCloud } from "@/lib/cloudSync";
-import { extractApiKey, isValidApiKey } from "@/sse/services/auth";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
-
-/**
- * Verify authentication - check API key or JWT cookie
- */
-async function verifyAuth(request) {
-  // Check API key (for external clients)
-  const apiKey = extractApiKey(request);
-  if (apiKey && (await isValidApiKey(apiKey))) {
-    return true;
-  }
-
-  // Check JWT cookie (for dashboard session)
-  if (process.env.JWT_SECRET) {
-    try {
-      const cookieStore = await cookies();
-      const token = cookieStore.get("auth_token")?.value;
-      if (token) {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-        await jwtVerify(token, secret);
-        return true;
-      }
-    } catch {
-      // Invalid/expired token or cookies not available
-    }
-  }
-
-  return false;
-}
+import { isAuthenticated } from "@/shared/utils/apiAuth";
 
 // GET /api/models/alias - Get all aliases
 export async function GET(request) {
   try {
     // Require authentication for security
-    if (!(await verifyAuth(request))) {
+    if (!(await isAuthenticated(request))) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
@@ -54,7 +24,7 @@ export async function GET(request) {
 export async function PUT(request) {
   try {
     // Require authentication for security
-    if (!(await verifyAuth(request))) {
+    if (!(await isAuthenticated(request))) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
@@ -79,7 +49,7 @@ export async function PUT(request) {
 export async function DELETE(request) {
   try {
     // Require authentication for security
-    if (!(await verifyAuth(request))) {
+    if (!(await isAuthenticated(request))) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
