@@ -25,6 +25,18 @@ export function withRuntimePortEnv(env, runtimePorts) {
   };
 }
 
+export function sanitizeColorEnv(env = {}) {
+  const sanitized = { ...env };
+
+  // Node warns when both FORCE_COLOR and NO_COLOR are set.
+  // Prefer NO_COLOR in test tooling to avoid noisy process warnings.
+  if (typeof sanitized.FORCE_COLOR !== "undefined" && typeof sanitized.NO_COLOR !== "undefined") {
+    delete sanitized.FORCE_COLOR;
+  }
+
+  return sanitized;
+}
+
 export function spawnWithForwardedSignals(command, args, options = {}) {
   const child = spawn(command, args, options);
 

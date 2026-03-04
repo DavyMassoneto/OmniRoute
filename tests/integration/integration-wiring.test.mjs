@@ -168,6 +168,33 @@ describe("API Routes — export HTTP methods", () => {
   });
 });
 
+describe("API Routes — T09 /v1 catalog consistency", () => {
+  const v1RouteSrc = readProjectFile("src/app/api/v1/route.ts");
+  const v1ModelsRouteSrc = readProjectFile("src/app/api/v1/models/route.ts");
+  const v1CatalogSrc = readProjectFile("src/app/api/v1/models/catalog.ts");
+
+  it("/api/v1 should delegate model catalog to unified builder", () => {
+    assert.ok(v1RouteSrc, "src/app/api/v1/route.ts should exist");
+    assert.match(v1RouteSrc, /getUnifiedModelsResponse/);
+    assert.match(v1RouteSrc, /from\s+["']\.\/models\/catalog["']/);
+    assert.doesNotMatch(v1RouteSrc, /const\s+models\s*=\s*\[/);
+  });
+
+  it("/api/v1/models route should only consume unified model catalog builder", () => {
+    assert.ok(v1ModelsRouteSrc, "src/app/api/v1/models/route.ts should exist");
+    assert.match(v1ModelsRouteSrc, /from\s+["']\.\/catalog["']/);
+    assert.doesNotMatch(
+      v1ModelsRouteSrc,
+      /export\s+async\s+function\s+getUnifiedModelsResponse\s*\(/
+    );
+  });
+
+  it("/api/v1/models/catalog should export unified model catalog builder", () => {
+    assert.ok(v1CatalogSrc, "src/app/api/v1/models/catalog.ts should exist");
+    assert.match(v1CatalogSrc, /export\s+async\s+function\s+getUnifiedModelsResponse\s*\(/);
+  });
+});
+
 // ─── Barrel Exports ─────────────────────────────────
 
 describe("Barrel Exports — shared/components", () => {

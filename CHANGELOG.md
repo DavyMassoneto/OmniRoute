@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+> ### ✨ Major Feature Release — MCP Server, A2A Protocol, Auto-Combo Engine & VS Code Extension
+>
+> Full AI orchestration ecosystem: 16 MCP tools, A2A v0.3 server, self-healing Auto-Combo engine, and a VS Code extension with smart dispatch, budget tracking, and human checkpoints.
+
+### 🆕 MCP Server (16 Tools)
+
+- **8 Essential Tools** — `get_health`, `list_combos`, `get_combo_metrics`, `switch_combo`, `check_quota`, `route_request`, `cost_report`, `list_models_catalog`
+- **8 Advanced Tools** — `simulate_route`, `set_budget_guard`, `set_resilience_profile`, `test_combo`, `get_provider_metrics`, `best_combo_for_task`, `explain_route`, `get_session_snapshot`
+- **Scoped Authorization** — 8 permission scopes (read:health, write:combo, etc.)
+- **Audit Logging** — Every tool call logged with duration, arguments, and result
+- **IDE Configs** — MCP configuration templates for Antigravity, Cursor, Copilot, Claude Desktop
+
+### 🤖 A2A Server (Agent-to-Agent v0.3)
+
+- **JSON-RPC 2.0** — Full router with `message/send`, `message/stream`, `tasks/get`, `tasks/cancel`
+- **Agent Card** — Dynamic `/.well-known/agent.json` with 2 skills
+- **Skills** — `smart-routing` (routing explanation, cost envelope, resilience trace, policy verdict) and `quota-management` (natural language quota queries)
+- **SSE Streaming** — Real-time task streaming with 15s heartbeat
+- **Task Manager** — State machine (submitted→working→completed/failed/canceled), TTL, cleanup
+- **Routing Logger** — Decision audit trail with 7-day retention
+
+### ⚡ Auto-Combo Engine
+
+- **6-Factor Scoring** — Quota, health, costInv, latencyInv, taskFit, stability (normalized 0-1)
+- **Task Fitness Table** — 30+ models × 6 task types with wildcard boosts
+- **4 Mode Packs** — Ship Fast, Cost Saver, Quality First, Offline Friendly
+- **Self-Healing** — Progressive cooldown exclusion, probe-based re-admission, incident mode (>50% OPEN)
+- **Bandit Exploration** — 5% exploratory routing for discovering better providers
+- **Adaptation Persistence** — EMA scoring with disk persistence every 10 decisions
+- **REST API** — `POST/GET /api/combos/auto` for CRUD operations
+
+### 🧩 VS Code Extension — Advanced Features
+
+- **MCP Client** — 16 tool wrappers with REST API fallback
+- **A2A Client** — Agent discovery, message send/stream, task management
+- **Smart Dispatch** — Task type detection, combo recommendation, risk scoring
+- **Preflight Dialog** — Risk-based display (auto-skip low, info medium, modal high)
+- **Budget Guard** — Session cost tracking with status bar indicator and threshold actions
+- **Mode Pack Selector** — Quick-pick UI for switching optimization profiles
+- **Health Monitor** — Circuit breaker state change notifications
+- **Human Checkpoint** — Multi-factor confidence evaluation with handoff dialog
+
+### 📊 Dashboard Pages
+
+- **MCP Dashboard** — Tool listing, usage stats, audit log with 30s auto-refresh
+- **A2A Dashboard** — Agent Card display, skill listing, task history with routing metadata
+- **Auto-Combo Dashboard** — Provider score bars, factor breakdown, mode pack selector, incident indicator, exclusion list
+
+### 🔗 Integrations
+
+- **OpenClaw** — Dynamic `provider.order` endpoint at `/api/cli-tools/openclaw/auto-order`
+
+### 🧪 Tests
+
+- **E2E Test Suite** — 6 scenarios (MCP, A2A, Auto-Combo, OpenClaw, Stress 100+50 parallel, Security)
+- **Unit Tests** — Essential tools, advanced tools, extension services, Auto-Combo engine, extension advanced features
+
+### 📁 New Files (35+)
+
+| Directory                        | Files                                                                                                                                                      |
+| :------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open-sse/mcp-server/`           | `server.ts`, `transport.ts`, `auth.ts`, `audit.ts`, `tools/advancedTools.ts`                                                                               |
+| `src/lib/a2a/`                   | `taskManager.ts`, `streaming.ts`, `routingLogger.ts`, `skills/smartRouting.ts`, `skills/quotaManagement.ts`                                                |
+| `open-sse/services/autoCombo/`   | `scoring.ts`, `taskFitness.ts`, `engine.ts`, `selfHealing.ts`, `modePacks.ts`, `persistence.ts`, `index.ts`                                                |
+| `vscode-extension/src/services/` | `mcpClient.ts`, `a2aClient.ts`, `policyEngine.ts`, `preflightDialog.ts`, `budgetGuard.ts`, `healthMonitor.ts`, `modePackSelector.ts`, `humanCheckpoint.ts` |
+| `src/app/(dashboard)/`           | `dashboard/mcp/page.tsx`, `dashboard/a2a/page.tsx`, `dashboard/auto-combo/page.tsx`                                                                        |
+| `docs/`                          | `mcp-server.md`, `a2a-server.md`, `auto-combo.md`, `vscode-extension.md`, `integrations/ide-configs.md`                                                    |
+
+---
+
 ## [1.8.1] — 2026-03-03
 
 ### 🐛 Bug Fixes

@@ -2,6 +2,7 @@
 
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
+import { sanitizeColorEnv } from "./runtime-env.mjs";
 
 const port = process.env.DASHBOARD_PORT || process.env.PORT || "20128";
 const baseUrl = process.env.OMNIROUTE_BASE_URL || `http://localhost:${port}`;
@@ -33,11 +34,12 @@ async function waitForServerReady() {
 async function main() {
   let serverProcess = null;
   let startedHere = false;
+  const testEnv = sanitizeColorEnv(process.env);
 
   if (!(await isServerReady())) {
     serverProcess = spawn(process.execPath, ["scripts/run-next-playwright.mjs", "dev"], {
       stdio: "inherit",
-      env: process.env,
+      env: testEnv,
     });
     startedHere = true;
     await waitForServerReady();
@@ -48,7 +50,7 @@ async function main() {
     ["./node_modules/vitest/vitest.mjs", "run", "tests/e2e/ecosystem.test.ts"],
     {
       stdio: "inherit",
-      env: process.env,
+      env: testEnv,
     }
   );
 

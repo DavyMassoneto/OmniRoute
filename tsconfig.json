@@ -36,5 +36,13 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "open-sse", "antigravity-manager-analysis"]
+  "exclude": [
+    "node_modules",
+    "open-sse",
+    "antigravity-manager-analysis",
+    "app.__qa_backup",
+    "vscode-extension",
+    "omnirouteCloud",
+    "omnirouteSite"
+  ]
 }

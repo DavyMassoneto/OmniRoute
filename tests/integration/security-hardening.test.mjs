@@ -149,3 +149,106 @@ test("server-init.ts calls enforceSecrets", () => {
   assert.ok(content, "src/server-init.ts should exist");
   assert.ok(content.includes("enforceSecrets"), "server-init.ts should call enforceSecrets");
 });
+
+// ─── T06/T07 Regression Checks ───────────────────────
+
+test("callLogs.ts wires no-log and PII sanitization before persistence", () => {
+  const content = readIfExists("src/lib/usage/callLogs.ts");
+  assert.ok(content, "src/lib/usage/callLogs.ts should exist");
+  assert.ok(
+    content.includes('from "../compliance"'),
+    "callLogs.ts should import compliance module"
+  );
+  assert.ok(content.includes('from "../piiSanitizer"'), "callLogs.ts should import piiSanitizer");
+  assert.ok(content.includes("isNoLog("), "callLogs.ts should check no-log policy");
+  assert.ok(content.includes("sanitizePayloadPII"), "callLogs.ts should sanitize PII recursively");
+});
+
+test("API key update route and DB layer wire persisted no-log controls", () => {
+  const routeContent = readIfExists("src/app/api/keys/[id]/route.ts");
+  assert.ok(routeContent, "src/app/api/keys/[id]/route.ts should exist");
+  assert.ok(routeContent.includes("noLog"), "key PATCH route should handle noLog field");
+
+  const dbContent = readIfExists("src/lib/db/apiKeys.ts");
+  assert.ok(dbContent, "src/lib/db/apiKeys.ts should exist");
+  assert.ok(dbContent.includes("no_log"), "api key DB module should persist no_log column");
+});
+
+test("MCP server enforces scopes from caller context before tool execution", () => {
+  const serverContent = readIfExists("open-sse/mcp-server/server.ts");
+  assert.ok(serverContent, "open-sse/mcp-server/server.ts should exist");
+  assert.ok(
+    serverContent.includes("resolveCallerScopeContext"),
+    "MCP server should resolve caller scopes from request context"
+  );
+  assert.ok(
+    serverContent.includes("evaluateToolScopes"),
+    "MCP server should evaluate required scopes per tool"
+  );
+
+  const scopeContent = readIfExists("open-sse/mcp-server/scopeEnforcement.ts");
+  assert.ok(scopeContent, "open-sse/mcp-server/scopeEnforcement.ts should exist");
+  assert.ok(
+    scopeContent.includes("authInfo"),
+    "scope enforcement should parse authInfo scopes when provided by transport"
+  );
+});
+
+test("T06 route payload validation uses validateBody in critical endpoints", () => {
+  const targets = [
+    "src/app/api/usage/budget/route.ts",
+    "src/app/api/policies/route.ts",
+    "src/app/api/fallback/chains/route.ts",
+    "src/app/api/models/route.ts",
+    "src/app/api/models/availability/route.ts",
+    "src/app/api/provider-models/route.ts",
+    "src/app/api/pricing/route.ts",
+    "src/app/api/rate-limits/route.ts",
+    "src/app/api/resilience/route.ts",
+    "src/app/api/v1/embeddings/route.ts",
+    "src/app/api/v1/images/generations/route.ts",
+    "src/app/api/v1/audio/speech/route.ts",
+    "src/app/api/v1/moderations/route.ts",
+    "src/app/api/v1/rerank/route.ts",
+    "src/app/api/oauth/[provider]/[action]/route.ts",
+    "src/app/api/oauth/cursor/import/route.ts",
+    "src/app/api/oauth/kiro/import/route.ts",
+    "src/app/api/oauth/kiro/social-exchange/route.ts",
+    "src/app/api/cloud/credentials/update/route.ts",
+    "src/app/api/cloud/model/resolve/route.ts",
+    "src/app/api/cloud/models/alias/route.ts",
+    "src/app/api/sync/cloud/route.ts",
+    "src/app/api/combos/[id]/route.ts",
+    "src/app/api/combos/test/route.ts",
+    "src/app/api/db-backups/route.ts",
+    "src/app/api/evals/route.ts",
+    "src/app/api/keys/[id]/route.ts",
+    "src/app/api/models/alias/route.ts",
+    "src/app/api/provider-nodes/route.ts",
+    "src/app/api/provider-nodes/[id]/route.ts",
+    "src/app/api/provider-nodes/validate/route.ts",
+    "src/app/api/providers/[id]/route.ts",
+    "src/app/api/providers/test-batch/route.ts",
+    "src/app/api/providers/validate/route.ts",
+    "src/app/api/v1beta/models/[...path]/route.ts",
+    "src/app/api/cli-tools/antigravity-mitm/route.ts",
+    "src/app/api/cli-tools/antigravity-mitm/alias/route.ts",
+    "src/app/api/cli-tools/backups/route.ts",
+    "src/app/api/cli-tools/claude-settings/route.ts",
+    "src/app/api/cli-tools/cline-settings/route.ts",
+    "src/app/api/cli-tools/codex-profiles/route.ts",
+    "src/app/api/cli-tools/codex-settings/route.ts",
+    "src/app/api/cli-tools/droid-settings/route.ts",
+    "src/app/api/cli-tools/guide-settings/[toolId]/route.ts",
+    "src/app/api/cli-tools/kilo-settings/route.ts",
+    "src/app/api/cli-tools/openclaw-settings/route.ts",
+  ];
+  for (const relPath of targets) {
+    const content = readIfExists(relPath);
+    assert.ok(content, `${relPath} should exist`);
+    assert.ok(
+      content.includes("validateBody("),
+      `${relPath} should validate payload with validateBody`
+    );
+  }
+});

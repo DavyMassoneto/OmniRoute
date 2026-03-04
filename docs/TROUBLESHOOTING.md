@@ -10,7 +10,7 @@ Common problems and solutions for OmniRoute.
 
 | Problem                       | Solution                                                           |
 | ----------------------------- | ------------------------------------------------------------------ |
-| First login not working       | Check `INITIAL_PASSWORD` in `.env` (default: `123456`)             |
+| First login not working       | Set `INITIAL_PASSWORD` in `.env` (no hardcoded default)            |
 | Dashboard opens on wrong port | Set `PORT=20128` and `NEXT_PUBLIC_BASE_URL=http://localhost:20128` |
 | No request logs under `logs/` | Set `ENABLE_REQUEST_LOGS=true`                                     |
 | EACCES: permission denied     | Set `DATA_DIR=/path/to/writable/dir` to override `~/.omniroute`    |
@@ -120,8 +120,8 @@ curl http://localhost:20128/api/monitoring/health
 
 ### Runtime Storage
 
-- Main state: `${DATA_DIR}/db.json` (providers, combos, aliases, keys, settings)
-- Usage: `${DATA_DIR}/usage.json`, `${DATA_DIR}/log.txt`, `${DATA_DIR}/call_logs/`
+- Main state: `${DATA_DIR}/storage.sqlite` (providers, combos, aliases, keys, settings)
+- Usage: SQLite tables in `storage.sqlite` (`usage_history`, `call_logs`, `proxy_logs`) + optional `${DATA_DIR}/log.txt` and `${DATA_DIR}/call_logs/`
 - Request logs: `<repo>/logs/...` (when `ENABLE_REQUEST_LOGS=true`)
 
 ---

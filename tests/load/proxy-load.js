@@ -39,9 +39,9 @@ export const options = {
       executor: "ramping-vus",
       startVUs: 1,
       stages: [
-        { duration: "10s", target: VUS },       // Ramp up
-        { duration: DURATION, target: VUS },     // Sustained load
-        { duration: "10s", target: 0 },          // Ramp down
+        { duration: "10s", target: VUS }, // Ramp up
+        { duration: DURATION, target: VUS }, // Sustained load
+        { duration: "10s", target: 0 }, // Ramp down
       ],
       exec: "chatCompletions",
     },
@@ -54,8 +54,8 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_duration: ["p(95)<5000"],  // 95% of requests < 5s
-    errors: ["rate<0.1"],               // Error rate < 10%
+    http_req_duration: ["p(95)<5000"], // 95% of requests < 5s
+    errors: ["rate<0.1"], // Error rate < 10%
     chat_latency: ["p(50)<3000", "p(95)<8000"],
     health_latency: ["p(95)<500"],
   },
@@ -76,9 +76,7 @@ const headers = {
 export function chatCompletions() {
   const payload = JSON.stringify({
     model: "gpt-4o-mini",
-    messages: [
-      { role: "user", content: "Say hello in one word." },
-    ],
+    messages: [{ role: "user", content: "Say hello in one word." }],
     temperature: 0,
     max_tokens: 10,
     stream: false,
@@ -112,7 +110,7 @@ export function chatCompletions() {
  * Health Check — lightweight endpoint to measure base latency.
  */
 export function healthCheck() {
-  const res = http.get(`${BASE_URL}/api/health`, {
+  const res = http.get(`${BASE_URL}/api/monitoring/health`, {
     headers: { Authorization: `Bearer ${API_KEY}` },
     timeout: "5s",
   });

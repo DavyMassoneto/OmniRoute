@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "strictNullChecks": true,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [],
+  "files": [
+    "src/app/api/settings/proxy/test/route.ts",
+    "src/lib/db/stateReset.ts",
+    "src/shared/validation/providerSchema.ts",
+    "src/shared/validation/schemas.ts",
+    "open-sse/config/providerModels.ts",
+    "open-sse/config/providerRegistry.ts",
+    "open-sse/mcp-server/server.ts",
+    "open-sse/mcp-server/scopeEnforcement.ts",
+    "open-sse/translator/registry.ts"
+  ],
+  "exclude": ["node_modules", ".next", "app.__qa_backup", "vscode-extension"]
+}

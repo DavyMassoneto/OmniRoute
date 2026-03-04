@@ -2,7 +2,7 @@
 
 🌐 **Languages:** 🇺🇸 [English](ARCHITECTURE.md) | 🇧🇷 [Português (Brasil)](i18n/pt-BR/ARCHITECTURE.md) | 🇪🇸 [Español](i18n/es/ARCHITECTURE.md) | 🇫🇷 [Français](i18n/fr/ARCHITECTURE.md) | 🇮🇹 [Italiano](i18n/it/ARCHITECTURE.md) | 🇷🇺 [Русский](i18n/ru/ARCHITECTURE.md) | 🇨🇳 [中文 (简体)](i18n/zh-CN/ARCHITECTURE.md) | 🇩🇪 [Deutsch](i18n/de/ARCHITECTURE.md) | 🇮🇳 [हिन्दी](i18n/in/ARCHITECTURE.md) | 🇹🇭 [ไทย](i18n/th/ARCHITECTURE.md) | 🇺🇦 [Українська](i18n/uk-UA/ARCHITECTURE.md) | 🇸🇦 [العربية](i18n/ar/ARCHITECTURE.md) | 🇯🇵 [日本語](i18n/ja/ARCHITECTURE.md) | 🇻🇳 [Tiếng Việt](i18n/vi/ARCHITECTURE.md) | 🇧🇬 [Български](i18n/bg/ARCHITECTURE.md) | 🇩🇰 [Dansk](i18n/da/ARCHITECTURE.md) | 🇫🇮 [Suomi](i18n/fi/ARCHITECTURE.md) | 🇮🇱 [עברית](i18n/he/ARCHITECTURE.md) | 🇭🇺 [Magyar](i18n/hu/ARCHITECTURE.md) | 🇮🇩 [Bahasa Indonesia](i18n/id/ARCHITECTURE.md) | 🇰🇷 [한국어](i18n/ko/ARCHITECTURE.md) | 🇲🇾 [Bahasa Melayu](i18n/ms/ARCHITECTURE.md) | 🇳🇱 [Nederlands](i18n/nl/ARCHITECTURE.md) | 🇳🇴 [Norsk](i18n/no/ARCHITECTURE.md) | 🇵🇹 [Português (Portugal)](i18n/pt/ARCHITECTURE.md) | 🇷🇴 [Română](i18n/ro/ARCHITECTURE.md) | 🇵🇱 [Polski](i18n/pl/ARCHITECTURE.md) | 🇸🇰 [Slovenčina](i18n/sk/ARCHITECTURE.md) | 🇸🇪 [Svenska](i18n/sv/ARCHITECTURE.md) | 🇵🇭 [Filipino](i18n/phi/ARCHITECTURE.md)
 
-_Last updated: 2026-02-18_
+_Last updated: 2026-03-04_
 
 ## Executive Summary
 
@@ -81,8 +81,8 @@ flowchart LR
         API[V1 Compatibility API\n/v1/*]
         DASH[Dashboard + Management API\n/api/*]
         CORE[SSE + Translation Core\nopen-sse + src/sse]
-        DB[(db.json)]
-        UDB[(usage.json + log.txt)]
+        DB[(storage.sqlite)]
+        UDB[(usage tables + log artifacts)]
     end
 
     subgraph Upstreams[Upstream Providers]
@@ -144,7 +144,7 @@ Management domains:
 - Providers/connections: `src/app/api/providers*`
 - Provider nodes: `src/app/api/provider-nodes*`
 - Custom models: `src/app/api/provider-models` (GET/POST/DELETE)
-- Model catalog: `src/app/api/models/catalog` (GET)
+- Model catalog: `src/app/api/models/route.ts` (GET)
 - Proxy config: `src/app/api/settings/proxy` (GET/PUT/DELETE) + `src/app/api/settings/proxy/test` (POST)
 - OAuth: `src/app/api/oauth/*`
 - Keys/aliases/combos/pricing: `src/app/api/keys*`, `src/app/api/models/alias`, `src/app/api/combos*`, `src/app/api/pricing`
@@ -225,18 +225,19 @@ OAuth provider modules (12 individual files under `src/lib/oauth/providers/`):
 
 ## 3) Persistence Layer
 
-Primary state DB:
+Primary state DB (SQLite):
 
-- `src/lib/localDb.ts`
-- file: `${DATA_DIR}/db.json` (or `$XDG_CONFIG_HOME/omniroute/db.json` when set, else `~/.omniroute/db.json`)
-- entities: providerConnections, providerNodes, modelAliases, combos, apiKeys, settings, pricing, **customModels**, **proxyConfig**, **ipFilter**, **thinkingBudget**, **systemPrompt**
+- Core infra: `src/lib/db/core.ts` (better-sqlite3, migrations, WAL)
+- Re-export facade: `src/lib/localDb.ts` (thin compatibility layer for callers)
+- file: `${DATA_DIR}/storage.sqlite` (or `$XDG_CONFIG_HOME/omniroute/storage.sqlite` when set, else `~/.omniroute/storage.sqlite`)
+- entities (tables + KV namespaces): providerConnections, providerNodes, modelAliases, combos, apiKeys, settings, pricing, **customModels**, **proxyConfig**, **ipFilter**, **thinkingBudget**, **systemPrompt**
 
-Usage DB:
+Usage persistence:
 
-- `src/lib/usageDb.ts`
-- files: `${DATA_DIR}/usage.json`, `${DATA_DIR}/log.txt`, `${DATA_DIR}/call_logs/`
-- follows same base directory policy as `localDb` (`DATA_DIR`, then `XDG_CONFIG_HOME/omniroute` when set)
-- decomposed into focused sub-modules: `migrations.ts`, `usageHistory.ts`, `costCalculator.ts`, `usageStats.ts`, `callLogs.ts`
+- facade: `src/lib/usageDb.ts` (decomposed modules in `src/lib/usage/*`)
+- SQLite tables in `storage.sqlite`: `usage_history`, `call_logs`, `proxy_logs`
+- optional file artifacts remain for compatibility/debug (`${DATA_DIR}/log.txt`, `${DATA_DIR}/call_logs/`, `<repo>/logs/...`)
+- legacy JSON files are migrated to SQLite by startup migrations when present
 
 Domain State DB (SQLite):
 
@@ -505,9 +506,9 @@ erDiagram
 
 Physical storage files:
 
-- main state: `${DATA_DIR}/db.json` (or `$XDG_CONFIG_HOME/omniroute/db.json` when set, else `~/.omniroute/db.json`)
-- usage stats: `${DATA_DIR}/usage.json`
-- request log lines: `${DATA_DIR}/log.txt`
+- primary runtime DB: `${DATA_DIR}/storage.sqlite`
+- request log lines: `${DATA_DIR}/log.txt` (compat/debug artifact)
+- structured call payload archives: `${DATA_DIR}/call_logs/`
 - optional translator/request debug sessions: `<repo>/logs/...`
 
 ## Deployment Topology
@@ -522,8 +523,8 @@ flowchart LR
     subgraph ContainerOrProcess[OmniRoute Runtime]
         Next[Next.js Server\nPORT=20128]
         Core[SSE Core + Executors]
-        MainDB[(db.json)]
-        UsageDB[(usage.json/log.txt)]
+        MainDB[(storage.sqlite)]
+        UsageDB[(usage tables + log artifacts)]
     end
 
     subgraph External[External Services]
@@ -550,7 +551,7 @@ flowchart LR
 - `src/app/api/providers*`: provider CRUD, validation, testing
 - `src/app/api/provider-nodes*`: custom compatible node management
 - `src/app/api/provider-models`: custom model management (CRUD)
-- `src/app/api/models/catalog`: full model catalog API (all types grouped by provider)
+- `src/app/api/models/route.ts`: model catalog API (aliases + custom models)
 - `src/app/api/oauth/*`: OAuth/device-code flows
 - `src/app/api/keys*`: local API key lifecycle
 - `src/app/api/models/alias`: alias management
@@ -582,8 +583,9 @@ flowchart LR
 
 ### Persistence
 
-- `src/lib/localDb.ts`: persistent config/state
-- `src/lib/usageDb.ts`: usage history and rolling request logs
+- `src/lib/db/*`: persistent config/state and domain persistence on SQLite
+- `src/lib/localDb.ts`: compatibility re-export for DB modules
+- `src/lib/usageDb.ts`: usage history/call logs facade on top of SQLite tables
 
 ## Provider Executor Coverage (Strategy Pattern)
 
@@ -724,23 +726,23 @@ Files are written to `<repo>/logs/<session>/` for each request session.
 
 ## 5) Data Integrity
 
-- DB shape migration/repair for missing keys
-- corrupt JSON reset safeguards for localDb and usageDb
+- SQLite schema migrations and auto-upgrade hooks at startup
+- legacy JSON → SQLite migration compatibility path
 
 ## Observability and Operational Signals
 
 Runtime visibility sources:
 
 - console logs from `src/sse/utils/logger.ts`
-- per-request usage aggregates in `usage.json`
-- textual request status log in `log.txt`
+- per-request usage aggregates in SQLite (`usage_history`, `call_logs`, `proxy_logs`)
+- textual request status log in `log.txt` (optional/compat)
 - optional deep request/translation logs under `logs/` when `ENABLE_REQUEST_LOGS=true`
 - dashboard usage endpoints (`/api/usage/*`) for UI consumption
 
 ## Security-Sensitive Boundaries
 
 - JWT secret (`JWT_SECRET`) secures dashboard session cookie verification/signing
-- Initial password fallback (`INITIAL_PASSWORD`, default `123456`) must be overridden in real deployments
+- Initial password bootstrap (`INITIAL_PASSWORD`) should be explicitly configured for first-run provisioning
 - API key HMAC secret (`API_KEY_SECRET`) secures generated local API key format
 - Provider secrets (API keys/tokens) are persisted in local DB and should be protected at filesystem level
 - Cloud sync endpoints rely on API key auth + machine id semantics
@@ -762,13 +764,13 @@ Environment variables actively used by code:
 
 ## Known Architectural Notes
 
-1. `usageDb` and `localDb` now share the same base directory policy (`DATA_DIR` -> `XDG_CONFIG_HOME/omniroute` -> `~/.omniroute`) with legacy file migration.
-2. `/api/v1/route.ts` returns a static model list and is not the main models source used by `/v1/models`.
+1. `usageDb` and `localDb` share the same base directory policy (`DATA_DIR` -> `XDG_CONFIG_HOME/omniroute` -> `~/.omniroute`) with legacy file migration.
+2. `/api/v1/route.ts` delegates to the same unified catalog builder used by `/api/v1/models` (`src/app/api/v1/models/catalog.ts`) to avoid semantic drift.
 3. Request logger writes full headers/body when enabled; treat log directory as sensitive.
 4. Cloud behavior depends on correct `NEXT_PUBLIC_BASE_URL` and cloud endpoint reachability.
 5. The `open-sse/` directory is published as the `@omniroute/open-sse` **npm workspace package**. Source code imports it via `@omniroute/open-sse/...` (resolved by Next.js `transpilePackages`). File paths in this document still use the directory name `open-sse/` for consistency.
 6. Charts in the dashboard use **Recharts** (SVG-based) for accessible, interactive analytics visualizations (model usage bar charts, provider breakdown tables with success rates).
-7. E2E tests use **Playwright** (`tests/e2e/`), run via `npm run test:e2e`. Unit tests use **Node.js test runner** (`tests/unit/`), run via `npm run test:plan3`. Source code under `src/` is **TypeScript** (`.ts`/`.tsx`); the `open-sse/` workspace remains JavaScript (`.js`).
+7. E2E tests use **Playwright** (`tests/e2e/`), run via `npm run test:e2e`. Unit tests use **Node.js test runner** (`tests/unit/`), run via `npm run test:unit`. Source code under `src/` is **TypeScript** (`.ts`/`.tsx`); the `open-sse/` workspace remains JavaScript (`.js`).
 8. Settings page is organized into 5 tabs: Security, Routing (6 global strategies: fill-first, round-robin, p2c, random, least-used, cost-optimized), Resilience (editable rate limits, circuit breaker, policies), AI (thinking budget, system prompt, prompt cache), Advanced (proxy).
 
 ## Operational Verification Checklist

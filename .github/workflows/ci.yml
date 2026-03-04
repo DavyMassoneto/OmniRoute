@@ -22,6 +22,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run check:cycles
+      - run: npm run check:route-validation:t06
+      - run: npm run check:any-budget:t11
+      - run: npm run check:docs-sync
+      - run: npm run typecheck:core
+      - run: npm run typecheck:noimplicit:core
 
   security:
     name: Security Audit
@@ -127,7 +133,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:integration
-        continue-on-error: true
 
   test-security:
     name: Security Tests
@@ -144,4 +149,3 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:security
-        continue-on-error: true

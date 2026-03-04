@@ -4,6 +4,7 @@ import { existsSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import {
   resolveRuntimePorts,
+  sanitizeColorEnv,
   spawnWithForwardedSignals,
   withRuntimePortEnv,
 } from "./runtime-env.mjs";
@@ -54,6 +55,11 @@ process.on("uncaughtException", (error) => {
 prepareAppDir();
 
 const runtimePorts = resolveRuntimePorts();
+const testServerEnv = {
+  ...sanitizeColorEnv(process.env),
+  OMNIROUTE_DISABLE_TOKEN_HEALTHCHECK: process.env.OMNIROUTE_DISABLE_TOKEN_HEALTHCHECK || "1",
+  OMNIROUTE_HIDE_HEALTHCHECK_LOGS: process.env.OMNIROUTE_HIDE_HEALTHCHECK_LOGS || "1",
+};
 const args = [
   "./node_modules/next/dist/bin/next",
   mode,
@@ -66,5 +72,5 @@ if (mode === "dev") {
 
 spawnWithForwardedSignals(process.execPath, args, {
   stdio: "inherit",
-  env: withRuntimePortEnv(process.env, runtimePorts),
+  env: withRuntimePortEnv(testServerEnv, runtimePorts),
 });
