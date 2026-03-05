@@ -175,8 +175,13 @@ export function openaiToClaudeRequest(model, body, stream) {
       };
     });
 
-    if (result.tools.length > 0) {
-      result.tools[result.tools.length - 1].cache_control = { type: "ephemeral", ttl: "1h" };
+    // Add cache_control to last tool that doesn't have defer_loading
+    // Tools with defer_loading=true cannot have cache_control (API rejects it)
+    for (let i = result.tools.length - 1; i >= 0; i--) {
+      if (!result.tools[i].defer_loading) {
+        result.tools[i].cache_control = { type: "ephemeral", ttl: "1h" };
+        break;
+      }
     }
   }
 

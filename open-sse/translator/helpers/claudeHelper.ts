@@ -185,15 +185,19 @@ export function prepareClaudeRequest(body, provider = null) {
     }
   }
 
-  // 3. Tools: remove all cache_control, add only to last tool with ttl 1h
+  // 3. Tools: remove all cache_control, add only to last non-deferred tool with ttl 1h
+  // Tools with defer_loading=true cannot have cache_control (API rejects it)
   if (body.tools && Array.isArray(body.tools)) {
-    body.tools = body.tools.map((tool, i) => {
+    body.tools = body.tools.map((tool) => {
       const { cache_control, ...rest } = tool;
-      if (i === body.tools.length - 1) {
-        return { ...rest, cache_control: { type: "ephemeral", ttl: "1h" } };
-      }
       return rest;
     });
+    for (let i = body.tools.length - 1; i >= 0; i--) {
+      if (!body.tools[i].defer_loading) {
+        body.tools[i].cache_control = { type: "ephemeral", ttl: "1h" };
+        break;
+      }
+    }
   }
 
   return body;
