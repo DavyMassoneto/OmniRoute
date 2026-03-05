@@ -892,9 +892,10 @@ OmniRoute v2.0 is built as an operational platform, not just a relay proxy.
 
 | Feature                              | What It Does                                                                     |
 | ------------------------------------ | -------------------------------------------------------------------------------- |
-| 🔧 **MCP Server (16 tools)**         | IDE/agent tools control routing, health, combos, limits, and operations          |
+| 🔧 **MCP Server (16 tools)**         | IDE/agent tools via 3 transports: stdio, SSE (`/api/mcp/sse`), Streamable HTTP (`/api/mcp/stream`) |
 | 🤝 **A2A Server (JSON-RPC + SSE)**   | Agent-to-agent task execution with sync and streaming flows                      |
-| 🧭 **MCP/A2A Dashboards**            | Dedicated management pages (`/dashboard/mcp`, `/dashboard/a2a`)                  |
+| 🧭 **Consolidated Endpoints Page**   | Tabbed management page with Endpoint Proxy, MCP, A2A, and API Endpoints tabs    |
+| 🎚️ **Service Enable/Disable Toggles** | ON/OFF switches for MCP and A2A with settings persistence (default: OFF)        |
 | 🛰️ **MCP Runtime Heartbeat**         | Real process status (pid, uptime, heartbeat age, transport, scope mode)          |
 | 📋 **MCP Audit Trail**               | Filterable audit logs with success/failure and key attribution                   |
 | 🔐 **MCP Scope Enforcement**         | 9 granular scope permissions for controlled tool access                          |

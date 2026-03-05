@@ -874,9 +874,10 @@ npm run electron:build:linux   # Linux (.AppImage)
 ### 🤖 عمليات الوكيل والبروتوكول (الإصدار 2.0)| ميزة | ماذا يفعل |
 
 | ------------------------------------ | -------------------------------------------------------------------------------- |
-| 🔧 **خادم MCP (16 أداة)** | تتحكم أدوات IDE/agent في التوجيه والصحة والمجموعات والحدود والعمليات |
+| 🔧 **خادم MCP (16 أداة)** | تتحكم أدوات IDE/agent في التوجيه والصحة والمجموعات والحدود والعمليات | IDE/agent tools via 3 transports: stdio, SSE (`/api/mcp/sse`), Streamable HTTP (`/api/mcp/stream`) 
 | 🤝 **خادم A2A (JSON-RPC + SSE)** | تنفيذ المهام من وكيل إلى وكيل مع تدفقات المزامنة والتدفق |
-| 🧭 **لوحات المعلومات MCP/A2A** | صفحات إدارة مخصصة (`/dashboard/mcp`, `/dashboard/a2a`) |
+| 🧭 **Consolidated Endpoints Page**   | Tabbed management page with Endpoint Proxy, MCP, A2A, and API Endpoints tabs    |
+| 🎚️ **Service Enable/Disable Toggles** | ON/OFF switches for MCP and A2A with settings persistence (default: OFF)        |
 | 🛰️ **نبضات وقت تشغيل MCP** | حالة العملية الحقيقية (معرف المنتج، وقت التشغيل، عمر نبضات القلب، النقل، وضع النطاق) |
 | 📋 **مسار تدقيق MCP** | سجلات التدقيق القابلة للتصفية مع النجاح/الفشل والإسناد الرئيسي |
 | 🔐 **تنفيذ نطاق MCP** | 9 أذونات نطاق تفصيلية للوصول إلى الأدوات الخاضعة للرقابة |

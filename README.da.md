@@ -875,9 +875,10 @@ OmniRoute v2.0 er bygget som en operationel platform, ikke kun en relæ-proxy.
 ### 🤖 Agent- og protokoloperationer (v2.0)| Funktion | Hvad det gør |
 
 | ------------------------------------ | ---------------------------------------------------------------------------------- |
-| 🔧 **MCP-server (16 værktøjer)** | IDE/agent-værktøjer kontrollerer routing, sundhed, kombinationer, grænser og operationer |
+| 🔧 **MCP-server (16 værktøjer)** | IDE/agent-værktøjer kontrollerer routing, sundhed, kombinationer, grænser og operationer | IDE/agent tools via 3 transports: stdio, SSE (`/api/mcp/sse`), Streamable HTTP (`/api/mcp/stream`) 
 | 🤝 **A2A-server (JSON-RPC + SSE)** | Agent-til-agent opgaveudførelse med synkronisering og streaming flows |
-| 🧭 **MCP/A2A Dashboards** | Dedikerede administrationssider (`/dashboard/mcp`, `/dashboard/a2a`) |
+| 🧭 **Consolidated Endpoints Page** | Dedikerede administrationssider (`/dashboard/mcp`, `/dashboard/a2a`) |
+| 🎚️ **Service Enable/Disable Toggles** | ON/OFF switches for MCP and A2A with settings persistence (default: OFF)        |
 | 🛰️ **MCP Runtime Heartbeat** | Reel processtatus (pid, oppetid, hjerteslagsalder, transport, omfangstilstand) |
 | 📋 **MCP Audit Trail** | Filtrerbare revisionslogfiler med succes/fejl og nøgletilskrivning |
 | 🔐 **MCP Scope Enforcement** | 9 granulære omfangstilladelser til kontrolleret værktøjsadgang |
