@@ -6,6 +6,9 @@
    directives ensure all utility classes in route groups are included. */
 @source "../app/(dashboard)";
 @source "../../open-sse";
+@source not "../../*.sqlite*";
+@source not "../../.claude*";
+@source not "../../.claude-memory";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

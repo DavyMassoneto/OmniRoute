@@ -148,3 +148,11 @@ export function truncateUrl(url, max = 50) {
     return url.length > max ? url.slice(0, max) + "…" : url;
   }
 }
+
+/**
+ * Safely extract a finite number, returning undefined for invalid values.
+ * Used by quota normalization in both backend (quotaCache) and frontend (ProviderLimits).
+ */
+export function safePercentage(value: unknown): number | undefined {
+  return typeof value === "number" && isFinite(value) ? value : undefined;
+}

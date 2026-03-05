@@ -3,6 +3,7 @@
  */
 
 import { PROVIDERS } from "../config/constants.ts";
+import { safePercentage } from "@/shared/utils/formatting";
 
 // GitHub API config
 const GITHUB_CONFIG = {
@@ -34,6 +35,7 @@ const CLAUDE_CONFIG = {
   oauthUsageUrl: "https://api.anthropic.com/api/oauth/usage",
   usageUrl: "https://api.anthropic.com/v1/organizations/{org_id}/usage",
   settingsUrl: "https://api.anthropic.com/v1/settings",
+  apiVersion: "2023-06-01",
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -469,7 +471,7 @@ async function getClaudeUsage(accessToken) {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "anthropic-beta": "oauth-2025-04-20",
-        "anthropic-version": "2023-06-01",
+        "anthropic-version": CLAUDE_CONFIG.apiVersion,
       },
     });
 
@@ -477,36 +479,34 @@ async function getClaudeUsage(accessToken) {
       const data = await oauthResponse.json();
       const quotas: Record<string, any> = {};
 
-      // utilization = percentage USED (e.g., 22 means 22% used, 78% remaining)
+      // utilization = percentage REMAINING (e.g., 90 means 90% remaining, 10% used)
+      const hasUtilization = (window: any) =>
+        window && typeof window === "object" && safePercentage(window.utilization) !== undefined;
+
       const createQuotaObject = (window: any) => {
-        const used = window?.utilization ?? 0;
-        const remaining = 100 - used;
+        const remaining = safePercentage(window.utilization) as number;
+        const used = 100 - remaining;
         return {
           used,
           total: 100,
           remaining,
-          resetAt: parseResetTime(window?.resets_at),
+          resetAt: parseResetTime(window.resets_at),
           remainingPercentage: remaining,
           unlimited: false,
         };
       };
 
-      if (data.five_hour && typeof data.five_hour === "object") {
+      if (hasUtilization(data.five_hour)) {
         quotas["session (5h)"] = createQuotaObject(data.five_hour);
       }
 
-      if (data.seven_day && typeof data.seven_day === "object") {
+      if (hasUtilization(data.seven_day)) {
         quotas["weekly (7d)"] = createQuotaObject(data.seven_day);
       }
 
       // Parse model-specific weekly windows (e.g., seven_day_sonnet, seven_day_opus)
       for (const [key, value] of Object.entries(data)) {
-        if (
-          key.startsWith("seven_day_") &&
-          key !== "seven_day" &&
-          value &&
-          typeof value === "object"
-        ) {
+        if (key.startsWith("seven_day_") && key !== "seven_day" && hasUtilization(value)) {
           const modelName = key.replace("seven_day_", "");
           quotas[`weekly ${modelName} (7d)`] = createQuotaObject(value);
         }
@@ -519,7 +519,10 @@ async function getClaudeUsage(accessToken) {
       };
     }
 
-    // Fallback: Try legacy settings/org endpoint (for API key users with org admin access)
+    // Fallback: OAuth endpoint returned non-OK, try legacy settings/org endpoint
+    console.warn(
+      `[Claude Usage] OAuth endpoint returned ${oauthResponse.status}, falling back to legacy`
+    );
     return await getClaudeUsageLegacy(accessToken);
   } catch (error) {
     return { message: `Claude connected. Unable to fetch usage: ${(error as any).message}` };
@@ -536,7 +539,7 @@ async function getClaudeUsageLegacy(accessToken) {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "anthropic-version": "2023-06-01",
+        "anthropic-version": CLAUDE_CONFIG.apiVersion,
       },
     });
 
@@ -550,7 +553,7 @@ async function getClaudeUsageLegacy(accessToken) {
             method: "GET",
             headers: {
               Authorization: `Bearer ${accessToken}`,
-              "anthropic-version": "2023-06-01",
+              "anthropic-version": CLAUDE_CONFIG.apiVersion,
             },
           }
         );

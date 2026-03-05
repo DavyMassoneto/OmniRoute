@@ -39,6 +39,13 @@ export async function register() {
     const { initApiBridgeServer } = await import("@/lib/apiBridgeServer");
     initApiBridgeServer();
 
+    // Quota cache: start background refresh for quota-aware account selection
+    // Dynamic import required — quotaCache depends on better-sqlite3 (Node-only),
+    // and instrumentation.ts is bundled for all runtimes including Edge.
+    const { startBackgroundRefresh } = await import("@/domain/quotaCache");
+    startBackgroundRefresh();
+    console.log("[STARTUP] Quota cache background refresh started");
+
     // Compliance: Initialize audit_log table + cleanup expired logs
     try {
       const { initAuditLog, cleanupExpiredLogs } = await import("@/lib/compliance/index");

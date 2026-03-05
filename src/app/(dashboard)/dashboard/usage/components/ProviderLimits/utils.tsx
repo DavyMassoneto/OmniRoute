@@ -1,4 +1,5 @@
 import { getModelsByProviderId } from "@omniroute/open-sse/config/providerModels.ts";
+import { safePercentage } from "@/shared/utils/formatting";
 
 /**
  * Format ISO date string to countdown format (inspired by vscode-antigravity-cockpit)
@@ -110,7 +111,7 @@ export function parseQuotaData(provider, data) {
               used: quota.used || 0,
               total: quota.total || 0,
               resetAt: quota.resetAt || null,
-              remainingPercentage: quota.remainingPercentage,
+              remainingPercentage: safePercentage(quota.remainingPercentage),
             });
           });
         }
@@ -159,7 +160,7 @@ export function parseQuotaData(provider, data) {
               used: quota.used || 0,
               total: quota.total || 0,
               resetAt: quota.resetAt || null,
-              remainingPercentage: quota.remainingPercentage,
+              remainingPercentage: safePercentage(quota.remainingPercentage),
             });
           });
         }

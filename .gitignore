@@ -117,3 +117,8 @@ icon.iconset/
 
 # VS Code Extension (independent Git repo)
 vscode-extension/
+
+# SQLite residual files
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
