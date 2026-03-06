@@ -479,13 +479,13 @@ async function getClaudeUsage(accessToken) {
       const data = await oauthResponse.json();
       const quotas: Record<string, any> = {};
 
-      // utilization = percentage REMAINING (e.g., 90 means 90% remaining, 10% used)
+      // utilization = percentage USED (e.g., 92 means 92% used, 8% remaining)
       const hasUtilization = (window: any) =>
         window && typeof window === "object" && safePercentage(window.utilization) !== undefined;
 
       const createQuotaObject = (window: any) => {
-        const remaining = safePercentage(window.utilization) as number;
-        const used = 100 - remaining;
+        const used = safePercentage(window.utilization) as number;
+        const remaining = 100 - used;
         return {
           used,
           total: 100,
