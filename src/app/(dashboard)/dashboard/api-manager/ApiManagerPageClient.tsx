@@ -92,12 +92,7 @@ export default function ApiManagerPageClient() {
 
   const { copied, copy } = useCopyToClipboard();
 
-  useEffect(() => {
-    fetchData();
-    fetchModels();
-  }, []);
-
-  const fetchModels = async () => {
+  const fetchModels = useCallback(async () => {
     try {
       const res = await fetch("/v1/models");
       if (res.ok) {
@@ -107,9 +102,9 @@ export default function ApiManagerPageClient() {
     } catch (error) {
       console.log("Error fetching models:", error);
     }
-  };
+  }, []);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/keys");
       if (res.ok) {
@@ -123,7 +118,12 @@ export default function ApiManagerPageClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    fetchModels();
+  }, [fetchData, fetchModels]);
 
   const fetchUsageStats = async (apiKeys: ApiKey[]) => {
     if (apiKeys.length === 0) return;
@@ -285,7 +285,7 @@ export default function ApiManagerPageClient() {
       grouped[provider].push(model);
     }
     return Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [allModels]);
+  }, [allModels, t]);
 
   // Filter models based on debounced search
   const filteredModelsByProvider = useMemo((): ProviderGroup[] => {

@@ -129,4 +129,5 @@ class TlsClient {
   }
 }
 
-export default new TlsClient();
+const tlsClient = new TlsClient();
+export default tlsClient;

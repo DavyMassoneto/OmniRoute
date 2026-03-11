@@ -64,16 +64,18 @@ async function consumeA2AStream(response: Response): Promise<{
     for (const event of events) {
       if (!event.startsWith("data: ")) continue;
       const payload = event.slice("data: ".length);
-      let parsed: any;
+      let parsed: Record<string, unknown>;
       try {
         parsed = JSON.parse(payload);
       } catch {
         continue;
       }
-      const nextTaskId = parsed?.params?.task?.id;
-      const nextState = parsed?.params?.task?.state;
+      const params = parsed?.params as Record<string, unknown> | undefined;
+      const task = params?.task as Record<string, unknown> | undefined;
+      const nextTaskId = task?.id as string | undefined;
+      const nextState = task?.state as string | undefined;
       if (nextTaskId) taskId = nextTaskId;
-      if (parsed?.params?.chunk) chunks += 1;
+      if (params?.chunk) chunks += 1;
       if (
         typeof nextState === "string" &&
         ["completed", "failed", "cancelled"].includes(nextState)
@@ -129,7 +131,9 @@ describe("Protocol clients E2E", () => {
       expect(auditRes.ok).toBe(true);
       const auditJson = await auditRes.json();
       const entries = Array.isArray(auditJson?.entries) ? auditJson.entries : [];
-      expect(entries.some((entry: any) => entry.toolName === "omniroute_get_health")).toBe(true);
+      expect(
+        entries.some((entry: Record<string, unknown>) => entry.toolName === "omniroute_get_health")
+      ).toBe(true);
     },
     TEST_TIMEOUT_MS * 2
   );
@@ -195,7 +199,7 @@ describe("Protocol clients E2E", () => {
       expect(tasksRes.ok).toBe(true);
       const tasksJson = await tasksRes.json();
       const tasks = Array.isArray(tasksJson?.tasks) ? tasksJson.tasks : [];
-      expect(tasks.some((task: any) => task.id === sendTaskId)).toBe(true);
+      expect(tasks.some((task: Record<string, unknown>) => task.id === sendTaskId)).toBe(true);
     },
     TEST_TIMEOUT_MS * 2
   );

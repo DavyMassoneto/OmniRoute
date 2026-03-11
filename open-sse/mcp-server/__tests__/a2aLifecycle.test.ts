@@ -77,7 +77,7 @@ describe("A2A task lifecycle regressions", () => {
     task.expiresAt = new Date(Date.now() - 1_000).toISOString();
 
     // private in TS only; callable at runtime for regression test
-    (tm as any).cleanupExpired();
+    (tm as unknown as { cleanupExpired(): void }).cleanupExpired();
 
     const loaded = tm.getTask(task.id);
     expect(loaded?.state).toBe("cancelled");

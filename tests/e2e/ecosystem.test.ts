@@ -105,7 +105,9 @@ describe("E2E: Quota Contract (/api/usage/quota)", () => {
     const filteredData = await filteredRes.json();
     expect(filteredData.meta.filters.provider).toBe(provider);
     expect(Array.isArray(filteredData.providers)).toBe(true);
-    expect(filteredData.providers.every((p: any) => p.provider === provider)).toBe(true);
+    expect(
+      filteredData.providers.every((p: Record<string, unknown>) => p.provider === provider)
+    ).toBe(true);
   });
 
   itCase("should filter quota by connectionId", async () => {
@@ -122,7 +124,9 @@ describe("E2E: Quota Contract (/api/usage/quota)", () => {
     const filteredData = await filteredRes.json();
     expect(filteredData.meta.filters.connectionId).toBe(connectionId);
     expect(Array.isArray(filteredData.providers)).toBe(true);
-    expect(filteredData.providers.every((p: any) => p.connectionId === connectionId)).toBe(true);
+    expect(
+      filteredData.providers.every((p: Record<string, unknown>) => p.connectionId === connectionId)
+    ).toBe(true);
   });
 });
 
