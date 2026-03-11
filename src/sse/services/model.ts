@@ -21,8 +21,8 @@ export async function resolveModelAlias(alias) {
  */
 export async function getModelInfo(modelStr) {
   const parsed = parseModel(modelStr);
+  const { extendedContext } = parsed;
 
-  // Check custom provider nodes first (for both alias and non-alias formats)
   // Check custom provider nodes first (for both alias and non-alias formats)
   if (parsed.providerAlias || parsed.provider) {
     // Ensure prefixToCheck is always a concise identifier, not a full model string
@@ -32,14 +32,14 @@ export async function getModelInfo(modelStr) {
     const openaiNodes = await getProviderNodes({ type: "openai-compatible" });
     const matchedOpenAI = openaiNodes.find((node) => node.prefix === prefixToCheck);
     if (matchedOpenAI) {
-      return { provider: matchedOpenAI.id, model: parsed.model };
+      return { provider: matchedOpenAI.id, model: parsed.model, extendedContext };
     }
 
     // Check Anthropic Compatible nodes
     const anthropicNodes = await getProviderNodes({ type: "anthropic-compatible" });
     const matchedAnthropic = anthropicNodes.find((node) => node.prefix === prefixToCheck);
     if (matchedAnthropic) {
-      return { provider: matchedAnthropic.id, model: parsed.model };
+      return { provider: matchedAnthropic.id, model: parsed.model, extendedContext };
     }
   }
 

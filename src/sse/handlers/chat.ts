@@ -227,7 +227,7 @@ async function handleSingleModelChat(
   const resolved = await resolveModelOrError(modelStr, body);
   if (resolved.error) return resolved.error;
 
-  const { provider, model, sourceFormat, targetFormat } = resolved;
+  const { provider, model, sourceFormat, targetFormat, extendedContext } = resolved;
 
   // 2. Pipeline gates (availability + circuit breaker)
   const gate = checkPipelineGates(provider, model);
@@ -290,6 +290,7 @@ async function handleSingleModelChat(
       apiKeyInfo,
       userAgent,
       comboName,
+      extendedContext,
     });
     if (telemetry) telemetry.endPhase();
 
@@ -366,18 +367,18 @@ async function resolveModelOrError(modelStr: string, body: any) {
     return { error: errorResponse(HTTP_STATUS.BAD_REQUEST, "Invalid model format") };
   }
 
-  const { provider, model } = modelInfo;
+  const { provider, model, extendedContext } = modelInfo;
   const sourceFormat = detectFormat(body);
   const providerAlias = PROVIDER_ID_TO_ALIAS[provider] || provider;
   const targetFormat = getModelTargetFormat(providerAlias, model) || getTargetFormat(provider);
 
   if (modelStr !== `${provider}/${model}`) {
-    log.info("ROUTING", `${modelStr} → ${provider}/${model}`);
+    log.info("ROUTING", `${modelStr} → ${provider}/${model}${extendedContext ? " [1m]" : ""}`);
   } else {
-    log.info("ROUTING", `Provider: ${provider}, Model: ${model}`);
+    log.info("ROUTING", `Provider: ${provider}, Model: ${model}${extendedContext ? " [1m]" : ""}`);
   }
 
-  return { provider, model, sourceFormat, targetFormat };
+  return { provider, model, sourceFormat, targetFormat, extendedContext };
 }
 
 /**
@@ -430,6 +431,7 @@ async function executeChatWithBreaker({
   apiKeyInfo,
   userAgent,
   comboName,
+  extendedContext,
 }: any): Promise<{ result: any; tlsFingerprintUsed: boolean }> {
   let tlsFingerprintUsed = false;
 
@@ -438,7 +440,7 @@ async function executeChatWithBreaker({
       runWithProxyContext(proxyInfo?.proxy || null, () =>
         (handleChatCore as any)({
           body: { ...body, model: `${provider}/${model}` },
-          modelInfo: { provider, model },
+          modelInfo: { provider, model, extendedContext },
           credentials: refreshedCredentials,
           log: logger,
           clientRawRequest,

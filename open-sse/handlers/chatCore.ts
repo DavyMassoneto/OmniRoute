@@ -68,7 +68,7 @@ export async function handleChatCore({
   userAgent,
   comboName,
 }) {
-  const { provider, model } = modelInfo;
+  const { provider, model, extendedContext } = modelInfo;
   const startTime = Date.now();
 
   // ── Phase 9.2: Idempotency check ──
@@ -248,6 +248,7 @@ export async function handleChatCore({
         credentials,
         signal: streamController.signal,
         log,
+        extendedContext,
       })
     );
 
@@ -335,6 +336,7 @@ export async function handleChatCore({
           credentials,
           signal: streamController.signal,
           log,
+          extendedContext,
         });
 
         if (retryResult.response.ok) {

@@ -39,6 +39,7 @@ export type ExecuteInput = {
   credentials: ProviderCredentials;
   signal?: AbortSignal | null;
   log?: ExecutorLog | null;
+  extendedContext?: boolean;
 };
 
 function mergeAbortSignals(primary: AbortSignal, secondary: AbortSignal): AbortSignal {
@@ -173,7 +174,7 @@ export class BaseExecutor {
     return { status: response.status, message: bodyText || `HTTP ${response.status}` };
   }
 
-  async execute({ model, body, stream, credentials, signal, log }: ExecuteInput) {
+  async execute({ model, body, stream, credentials, signal, log, extendedContext }: ExecuteInput) {
     const fallbackCount = this.getFallbackCount();
     let lastError: unknown = null;
     let lastStatus = 0;
@@ -181,6 +182,17 @@ export class BaseExecutor {
     for (let urlIndex = 0; urlIndex < fallbackCount; urlIndex++) {
       const url = this.buildUrl(model, stream, urlIndex, credentials);
       const headers = this.buildHeaders(credentials, stream);
+
+      // Append 1M context beta header when [1m] suffix was used
+      if (extendedContext) {
+        const existing = headers["Anthropic-Beta"];
+        if (existing) {
+          headers["Anthropic-Beta"] = existing + ",context-1m-2025-08-07";
+        } else {
+          headers["Anthropic-Beta"] = "context-1m-2025-08-07";
+        }
+      }
+
       const transformedBody = this.transformRequest(model, body, stream, credentials);
 
       try {
