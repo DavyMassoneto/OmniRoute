@@ -1,5 +1,5 @@
 // Re-export from open-sse with localDb integration
-import { getModelAliases, getComboByName, getProviderNodes } from "@/lib/localDb";
+import { getModelAliases, getComboByName, getProviderNodes, getCustomModels } from "@/lib/localDb";
 import {
   parseModel,
   resolveModelAliasFromMap,
@@ -14,6 +14,24 @@ export { parseModel };
 export async function resolveModelAlias(alias) {
   const aliases = await getModelAliases();
   return resolveModelAliasFromMap(alias, aliases);
+}
+
+/**
+ * Look up the apiFormat for a custom model from the DB.
+ * Returns "responses" if the model is configured for the Responses API, otherwise undefined.
+ */
+async function lookupCustomModelApiFormat(
+  providerId: string,
+  modelId: string
+): Promise<string | undefined> {
+  try {
+    const models = await getCustomModels(providerId);
+    if (!Array.isArray(models)) return undefined;
+    const match = models.find((m: any) => m.id === modelId);
+    return match?.apiFormat === "responses" ? "responses" : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -32,14 +50,32 @@ export async function getModelInfo(modelStr) {
     const openaiNodes = await getProviderNodes({ type: "openai-compatible" });
     const matchedOpenAI = openaiNodes.find((node) => node.prefix === prefixToCheck);
     if (matchedOpenAI) {
-      return { provider: matchedOpenAI.id, model: parsed.model, extendedContext };
+      const apiFormat = await lookupCustomModelApiFormat(
+        matchedOpenAI.id as string,
+        parsed.model as string
+      );
+      return {
+        provider: matchedOpenAI.id,
+        model: parsed.model,
+        extendedContext,
+        ...(apiFormat && { apiFormat }),
+      };
     }
 
     // Check Anthropic Compatible nodes
     const anthropicNodes = await getProviderNodes({ type: "anthropic-compatible" });
     const matchedAnthropic = anthropicNodes.find((node) => node.prefix === prefixToCheck);
     if (matchedAnthropic) {
-      return { provider: matchedAnthropic.id, model: parsed.model, extendedContext };
+      const apiFormat = await lookupCustomModelApiFormat(
+        matchedAnthropic.id as string,
+        parsed.model as string
+      );
+      return {
+        provider: matchedAnthropic.id,
+        model: parsed.model,
+        extendedContext,
+        ...(apiFormat && { apiFormat }),
+      };
     }
   }
 

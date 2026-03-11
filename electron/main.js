@@ -26,10 +26,12 @@ const {
   nativeImage,
   shell,
   session,
+  Notification,
 } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
+const { autoUpdater } = require("electron-updater");
 
 // ── Single Instance Lock ───────────────────────────────────
 const gotTheLock = app.requestSingleInstanceLock();
@@ -61,6 +63,11 @@ let nextServer = null;
 let serverPort = 20128;
 
 const getServerUrl = () => `http://localhost:${serverPort}`;
+
+// ── Auto-Updater Configuration ──────────────────────────────
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.logger = console;
 
 // ── Helper: Send IPC event to renderer (#5) ────────────────
 function sendToRenderer(channel, data) {
@@ -101,6 +108,77 @@ async function waitForServerExit(proc, timeoutMs = 5000) {
       }, timeoutMs)
     ),
   ]);
+}
+
+// ── Auto-Updater Event Handlers ─────────────────────────────
+function setupAutoUpdater() {
+  autoUpdater.on("checking-for-update", () => {
+    sendToRenderer("update-status", { status: "checking" });
+    console.log("[Electron] Checking for updates...");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    sendToRenderer("update-status", { status: "available", version: info.version });
+    console.log("[Electron] Update available:", info.version);
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    sendToRenderer("update-status", { status: "not-available", version: info.version });
+    console.log("[Electron] No update available");
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    sendToRenderer("update-status", {
+      status: "downloading",
+      percent: Math.round(progress.percent),
+      transferred: progress.transferred,
+      total: progress.total,
+    });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    sendToRenderer("update-status", { status: "downloaded", version: info.version });
+    console.log("[Electron] Update downloaded:", info.version);
+
+    if (Notification.isSupported()) {
+      const notification = new Notification({
+        title: "OmniRoute Update Ready",
+        body: `Version ${info.version} is ready to install. Click to restart.`,
+      });
+      notification.on("click", () => {
+        autoUpdater.quitAndInstall();
+      });
+      notification.show();
+    }
+  });
+
+  autoUpdater.on("error", (error) => {
+    sendToRenderer("update-status", { status: "error", message: error.message });
+    console.error("[Electron] Update error:", error);
+  });
+}
+
+async function checkForUpdates(silent = false) {
+  if (isDev) {
+    console.log("[Electron] Dev mode — skipping auto-update");
+    if (!silent) {
+      sendToRenderer("update-status", { status: "error", message: "Updates disabled in dev mode" });
+    }
+    return;
+  }
+  await autoUpdater.checkForUpdates();
+}
+
+async function downloadUpdate() {
+  await autoUpdater.downloadUpdate();
+}
+
+function installUpdate() {
+  if (nextServer) {
+    nextServer.kill("SIGTERM");
+    nextServer = null;
+  }
+  autoUpdater.quitAndInstall();
 }
 
 // ── Content Security Policy (#15) ──────────────────────────
@@ -237,6 +315,11 @@ function createTray() {
     },
     { type: "separator" },
     {
+      label: "Check for Updates",
+      click: () => checkForUpdates(false),
+    },
+    { type: "separator" },
+    {
       label: "Quit",
       click: () => {
         app.isQuitting = true;
@@ -300,6 +383,69 @@ function startNextServer() {
     return;
   }
 
+  // ── Zero-config bootstrap: auto-generate required secrets ─────────────────
+  // Electron uses CJS — cannot dynamically import ESM bootstrap-env.mjs.
+  // This mirrors bootstrap-env.mjs logic synchronously:
+  //   1. Read persisted secrets from userData/server.env
+  //   2. Generate missing secrets with crypto.randomBytes()
+  //   3. Persist back to userData/server.env for future restarts
+  const crypto = require("crypto");
+  const userDataDir = app.getPath("userData");
+  const serverEnvPath = path.join(userDataDir, "server.env");
+
+  // Parse a simple KEY=VALUE file
+  function parseEnvFile(filePath) {
+    if (!fs.existsSync(filePath)) return {};
+    const env = {};
+    for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
+      const t = line.trim();
+      if (!t || t.startsWith("#")) continue;
+      const eq = t.indexOf("=");
+      if (eq < 1) continue;
+      env[t.slice(0, eq).trim()] = t.slice(eq + 1).trim();
+    }
+    return env;
+  }
+
+  const persisted = parseEnvFile(serverEnvPath);
+  const serverEnv = { ...process.env, ...persisted };
+  let changed = false;
+
+  if (!serverEnv.JWT_SECRET) {
+    serverEnv.JWT_SECRET = persisted.JWT_SECRET = crypto.randomBytes(64).toString("hex");
+    changed = true;
+    console.log("[Electron] ✨ JWT_SECRET auto-generated");
+  }
+  if (!serverEnv.STORAGE_ENCRYPTION_KEY) {
+    serverEnv.STORAGE_ENCRYPTION_KEY = persisted.STORAGE_ENCRYPTION_KEY = crypto
+      .randomBytes(32)
+      .toString("hex");
+    serverEnv.STORAGE_ENCRYPTION_KEY_VERSION = persisted.STORAGE_ENCRYPTION_KEY_VERSION = "v1";
+    changed = true;
+    console.log("[Electron] ✨ STORAGE_ENCRYPTION_KEY auto-generated");
+  }
+  if (!serverEnv.API_KEY_SECRET) {
+    serverEnv.API_KEY_SECRET = persisted.API_KEY_SECRET = crypto.randomBytes(32).toString("hex");
+    changed = true;
+    console.log("[Electron] ✨ API_KEY_SECRET auto-generated");
+  }
+  if (changed) {
+    serverEnv.OMNIROUTE_BOOTSTRAPPED = "true";
+    try {
+      fs.mkdirSync(userDataDir, { recursive: true });
+      const lines = [
+        "# Auto-generated by OmniRoute bootstrap",
+        "",
+        ...Object.entries(persisted).map(([k, v]) => `${k}=${v}`),
+        "",
+      ];
+      fs.writeFileSync(serverEnvPath, lines.join("\n"), "utf8");
+      console.log("[Electron] 📁 Secrets persisted to:", serverEnvPath);
+    } catch (e) {
+      console.warn("[Electron] Could not persist secrets:", e.message);
+    }
+  }
+
   console.log("[Electron] Starting Next.js server on port", serverPort);
   sendToRenderer("server-status", { status: "starting", port: serverPort });
 
@@ -307,7 +453,7 @@ function startNextServer() {
   nextServer = spawn("node", [serverScript], {
     cwd: NEXT_SERVER_PATH,
     env: {
-      ...process.env,
+      ...serverEnv,
       PORT: String(serverPort),
       NODE_ENV: "production",
     },
@@ -391,6 +537,36 @@ function setupIpcHandlers() {
   });
 
   ipcMain.on("window-close", () => mainWindow?.close());
+
+  // Auto-update IPC handlers
+  ipcMain.handle("check-for-updates", async () => {
+    try {
+      await checkForUpdates(false);
+      return { success: true };
+    } catch (error) {
+      console.error("[Electron] Check for updates failed:", error);
+      sendToRenderer("update-status", { status: "error", message: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle("download-update", async () => {
+    try {
+      await downloadUpdate();
+      return { success: true };
+    } catch (error) {
+      console.error("[Electron] Download update failed:", error);
+      sendToRenderer("update-status", { status: "error", message: error.message });
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle("install-update", () => {
+    installUpdate();
+    // No return value — app will quit and restart
+  });
+
+  ipcMain.handle("get-app-version", () => app.getVersion());
 }
 
 // ── App Lifecycle ──────────────────────────────────────────
@@ -407,6 +583,14 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
   setupIpcHandlers();
+  setupAutoUpdater();
+
+  // Check for updates after a short delay (don't block startup)
+  if (!isDev) {
+    setTimeout(() => {
+      checkForUpdates(true);
+    }, 3000);
+  }
 
   // macOS: recreate window when dock icon clicked
   app.on("activate", () => {

@@ -55,17 +55,18 @@ jobs:
             target: win
             ext: .exe
           - platform: macos-intel
-            runner: macos-latest
-            target: mac
+            runner: macos-15-intel
+            target: mac-x64
             ext: .dmg
           - platform: macos-arm64
             runner: macos-latest
-            target: mac
+            target: mac-arm64
             ext: -arm64.dmg
           - platform: linux
             runner: ubuntu-latest
             target: linux
             ext: .AppImage
+            deb_ext: .deb
 
     steps:
       - name: Checkout
@@ -78,7 +79,7 @@ jobs:
           cache: npm
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
@@ -93,12 +94,31 @@ jobs:
           JWT_SECRET: ci-build-secret-with-sufficient-length-for-validation
         run: npm run build
 
+      - name: Sync version in electron/package.json
+        shell: bash
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          VERSION_NO_V="${VERSION#v}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('electron/package.json'));
+            pkg.version = '$VERSION_NO_V';
+            fs.writeFileSync('electron/package.json', JSON.stringify(pkg, null, 2) + '\\n');
+          "
+          echo "✓ electron/package.json version set to $VERSION_NO_V"
+
+      - name: Install fpm (Linux .deb packaging tool)
+        if: matrix.platform == 'linux'
+        run: sudo gem install fpm --no-document
+
       - name: Install Electron dependencies
         working-directory: electron
         run: npm install --no-audit --no-fund
 
       - name: Build Electron for ${{ matrix.platform }}
         working-directory: electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build:${{ matrix.target }}
 
       - name: Collect installers
@@ -110,6 +130,12 @@ jobs:
           for file in *${{ matrix.ext }}; do
             [ -f "$file" ] && cp "$file" ../../release-assets/
           done
+          # Linux: also copy .deb package
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            for file in *.deb; do
+              [ -f "$file" ] && cp "$file" ../../release-assets/
+            done
+          fi
           # Windows: also copy portable standalone exe as OmniRoute.exe
           if [ "${{ matrix.platform }}" = "windows" ]; then
             for file in *.exe; do
@@ -120,7 +146,7 @@ jobs:
           fi
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: electron-${{ matrix.platform }}
           path: release-assets/
@@ -136,7 +162,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release-assets
           merge-multiple: true
@@ -164,14 +190,14 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          fail_on_unmatched_files: false
           files: |
             release-assets/*.dmg
-            release-assets/*-arm64.dmg
             release-assets/*.exe
             release-assets/*.AppImage
+            release-assets/*.deb
             release-assets/*.blockmap
             release-assets/*.source.tar.gz
             release-assets/*.source.zip
-            release-assets/OmniRoute.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

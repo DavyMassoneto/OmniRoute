@@ -100,7 +100,10 @@
     "themeViolet": "Violet",
     "themeOrange": "Orange",
     "themeCyan": "Cyan",
-    "endpoints": "Endpoint"
+    "endpoints": "Endpoint",
+    "playground": "Playground",
+    "agents": "Agen",
+    "cliToolsShort": "Alat"
   },
   "themesPage": {
     "title": "Themes",
@@ -1730,7 +1733,8 @@
     "cacheCreationTokenDesc": "Token yang digunakan untuk membuat entri cache (pengembalian ke tingkat input)",
     "customPricingNote": "Anda dapat mengganti harga default untuk model tertentu. Penggantian khusus lebih diprioritaskan dibandingkan harga yang terdeteksi otomatis.",
     "editPricing": "Sunting Harga",
-    "viewFullDetails": "Lihat Detail Lengkap"
+    "viewFullDetails": "Lihat Detail Lengkap",
+    "themeCoral": "Koral"
   },
   "translator": {
     "title": "Penerjemah",

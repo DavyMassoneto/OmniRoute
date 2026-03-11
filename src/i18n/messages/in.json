@@ -100,7 +100,10 @@
     "themeViolet": "Violet",
     "themeOrange": "Orange",
     "themeCyan": "Cyan",
-    "endpoints": "Endpoint"
+    "endpoints": "Endpoint",
+    "playground": "Playground",
+    "agents": "एजेंट",
+    "cliToolsShort": "उपकरण"
   },
   "themesPage": {
     "title": "Themes",
@@ -1730,7 +1733,8 @@
     "cacheCreationTokenDesc": "कैश प्रविष्टियाँ बनाने के लिए उपयोग किए जाने वाले टोकन (इनपुट दर पर फ़ॉलबैक)",
     "customPricingNote": "आप विशिष्ट मॉडलों के लिए डिफ़ॉल्ट मूल्य निर्धारण को ओवरराइड कर सकते हैं। कस्टम ओवरराइड्स को स्वतः-पता लगाए गए मूल्य-निर्धारण पर प्राथमिकता दी जाती है।",
     "editPricing": "मूल्य निर्धारण संपादित करें",
-    "viewFullDetails": "पूर्ण विवरण देखें"
+    "viewFullDetails": "पूर्ण विवरण देखें",
+    "themeCoral": "कोरल"
   },
   "translator": {
     "title": "अनुवादक",

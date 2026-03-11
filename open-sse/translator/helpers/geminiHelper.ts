@@ -41,6 +41,8 @@ export const UNSUPPORTED_SCHEMA_CONSTRAINTS = [
   "else",
   "contentMediaType",
   "contentEncoding",
+  // Non-standard schema fields (not recognized by Gemini API)
+  "optional",
   // UI/Styling properties (from Cursor tools - NOT JSON Schema standard)
   "cornerRadius",
   "fillColor",
@@ -122,15 +124,6 @@ export function generateRequestId() {
 // Generate session ID
 export function generateSessionId() {
   return `-${Math.floor(Math.random() * 9000000000000000000)}`;
-}
-
-// Generate project ID
-export function generateProjectId() {
-  const adjectives = ["useful", "bright", "swift", "calm", "bold"];
-  const nouns = ["fuze", "wave", "spark", "flow", "core"];
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  return `${adj}-${noun}-${crypto.randomUUID().slice(0, 5)}`;
 }
 
 // Helper: Remove unsupported keywords recursively from object/array

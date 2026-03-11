@@ -107,7 +107,30 @@ export async function POST(request) {
   if (policy.rejection) return policy.rejection;
 
   // Parse model to get provider
-  const { provider } = parseImageModel(body.model);
+  let { provider } = parseImageModel(body.model);
+  let isCustomModel = false;
+
+  // If not in built-in registry, check custom models tagged for images
+  if (!provider) {
+    try {
+      const customModelsMap = (await getAllCustomModels()) as Record<string, any>;
+      for (const [providerId, models] of Object.entries(customModelsMap)) {
+        if (!Array.isArray(models)) continue;
+        for (const model of models) {
+          if (!model?.id || !Array.isArray(model.supportedEndpoints)) continue;
+          if (!model.supportedEndpoints.includes("images")) continue;
+          const fullId = `${providerId}/${model.id}`;
+          if (fullId === body.model) {
+            provider = providerId;
+            isCustomModel = true;
+            break;
+          }
+        }
+        if (provider) break;
+      }
+    } catch {}
+  }
+
   if (!provider) {
     return errorResponse(
       HTTP_STATUS.BAD_REQUEST,
@@ -128,9 +151,23 @@ export async function POST(request) {
         `No credentials for image provider: ${provider}`
       );
     }
+  } else if (isCustomModel) {
+    // Custom models need credentials from the provider connection
+    credentials = await getProviderCredentials(provider);
+    if (!credentials) {
+      return errorResponse(
+        HTTP_STATUS.BAD_REQUEST,
+        `No credentials for custom image provider: ${provider}`
+      );
+    }
   }
 
-  const result = await handleImageGeneration({ body, credentials, log });
+  const result = await handleImageGeneration({
+    body,
+    credentials,
+    log,
+    ...(isCustomModel && { resolvedProvider: provider }),
+  });
 
   if (result.success) {
     return new Response(JSON.stringify((result as any).data), {

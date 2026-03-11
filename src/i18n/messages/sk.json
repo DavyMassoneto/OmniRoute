@@ -100,7 +100,10 @@
     "themeViolet": "Violet",
     "themeOrange": "Orange",
     "themeCyan": "Cyan",
-    "endpoints": "Koncové body"
+    "endpoints": "Koncové body",
+    "playground": "Ihrisko",
+    "agents": "Agenti",
+    "cliToolsShort": "Nástroje"
   },
   "themesPage": {
     "title": "Themes",
@@ -1730,7 +1733,8 @@
     "cacheCreationTokenDesc": "Tokeny používané na vytváranie záznamov vo vyrovnávacej pamäti (záložná rýchlosť vstupu)",
     "customPricingNote": "Predvolené ceny pre konkrétne modely môžete prepísať. Vlastné prepísania majú prednosť pred automaticky zistenými cenami.",
     "editPricing": "Upraviť ceny",
-    "viewFullDetails": "Zobraziť úplné podrobnosti"
+    "viewFullDetails": "Zobraziť úplné podrobnosti",
+    "themeCoral": "Korál"
   },
   "translator": {
     "title": "Prekladateľ",

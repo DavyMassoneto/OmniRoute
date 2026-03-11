@@ -100,7 +100,10 @@
     "themeViolet": "Violet",
     "themeOrange": "Orange",
     "themeCyan": "Cyan",
-    "endpoints": "エンドポイント"
+    "endpoints": "エンドポイント",
+    "playground": "プレイグラウンド",
+    "agents": "エージェント",
+    "cliToolsShort": "ツール"
   },
   "themesPage": {
     "title": "Themes",
@@ -1730,7 +1733,8 @@
     "cacheCreationTokenDesc": "キャッシュ エントリの作成に使用されるトークン (入力レートへのフォールバック)",
     "customPricingNote": "特定のモデルのデフォルトの価格をオーバーライドできます。カスタム オーバーライドは、自動検出された価格設定よりも優先されます。",
     "editPricing": "価格の編集",
-    "viewFullDetails": "詳細を表示"
+    "viewFullDetails": "詳細を表示",
+    "themeCoral": "コーラル"
   },
   "translator": {
     "title": "翻訳者",

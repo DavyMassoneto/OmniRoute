@@ -261,7 +261,13 @@ export function openaiToOpenAIResponsesRequest(
                 if (contentItem.type === "text") {
                   return { type: "input_text", text: toString(contentItem.text) };
                 }
-                if (contentItem.type === "image_url") return contentValue; // passthrough images
+                if (contentItem.type === "image_url") {
+                  const imgUrl = contentItem.image_url as string | { url?: string };
+                  return {
+                    type: "input_image",
+                    image_url: typeof imgUrl === "string" ? imgUrl : imgUrl?.url || "",
+                  };
+                }
                 return contentValue;
               })
             : [{ type: "input_text", text: "" }];
@@ -275,30 +281,11 @@ export function openaiToOpenAIResponsesRequest(
 
     // Convert assistant messages
     if (role === "assistant") {
-      // Add reasoning content before assistant output
-      if (msg.reasoning_content) {
-        input.push({
-          type: "reasoning",
-          id: `reasoning_${input.length}`,
-          summary: [{ type: "summary_text", text: toString(msg.reasoning_content) }],
-        });
-      }
+      // Skip reasoning_content — OpenAI Responses API requires server-generated
+      // rs_* IDs for reasoning items. Synthesizing client-side IDs (e.g. reasoning_N)
+      // causes 400 errors from Responses-compatible upstreams. (#224)
 
-      // Handle thinking blocks in array content
-      if (Array.isArray(msg.content)) {
-        for (const blockValue of msg.content) {
-          const block = toRecord(blockValue);
-          if (block.type === "thinking" || block.type === "redacted_thinking") {
-            input.push({
-              type: "reasoning",
-              id: `reasoning_${input.length}`,
-              summary: [
-                { type: "summary_text", text: toString(block.thinking || block.data, "...") },
-              ],
-            });
-          }
-        }
-      }
+      // Skip thinking blocks in array content — same rs_* ID constraint applies
 
       // Build assistant output content
       const outputContent: unknown[] = [];

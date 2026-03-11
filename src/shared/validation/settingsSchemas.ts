@@ -34,4 +34,20 @@ export const updateSettingsSchema = z.object({
   mcpEnabled: z.boolean().optional(),
   mcpTransport: z.enum(["stdio", "sse", "streamable-http"]).optional(),
   a2aEnabled: z.boolean().optional(),
+  // CLI Fingerprint compatibility (per-provider)
+  cliCompatProviders: z.array(z.string().max(100)).optional(),
+  // Custom CLI agent definitions for ACP
+  customAgents: z
+    .array(
+      z.object({
+        id: z.string().max(50),
+        name: z.string().max(100),
+        binary: z.string().max(200),
+        versionCommand: z.string().max(300),
+        providerAlias: z.string().max(50),
+        spawnArgs: z.array(z.string().max(200)),
+        protocol: z.enum(["stdio", "http"]),
+      })
+    )
+    .optional(),
 });

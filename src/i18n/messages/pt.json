@@ -100,7 +100,10 @@
     "themeGreen": "Verde",
     "themeViolet": "Violeta",
     "themeOrange": "Laranja",
-    "themeCyan": "Ciano"
+    "themeCyan": "Ciano",
+    "playground": "Playground",
+    "agents": "Agentes",
+    "cliToolsShort": "Ferramentas"
   },
   "themesPage": {
     "title": "Themes",
@@ -1742,7 +1745,8 @@
     "cacheCreationTokenDesc": "Tokens usados para criar entradas de cache (fallback para taxa de entrada)",
     "customPricingNote": "Você pode substituir o preço padrão de modelos específicos. As substituições personalizadas têm prioridade sobre os preços detectados automaticamente.",
     "editPricing": "Editar preços",
-    "viewFullDetails": "Ver detalhes completos"
+    "viewFullDetails": "Ver detalhes completos",
+    "themeCoral": "Coral"
   },
   "translator": {
     "title": "Tradutor",

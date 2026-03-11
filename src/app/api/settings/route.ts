@@ -5,11 +5,17 @@ import bcrypt from "bcryptjs";
 import { getRuntimePorts } from "@/lib/runtime/ports";
 import { updateSettingsSchema } from "@/shared/validation/settingsSchemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+import { setCliCompatProviders } from "../../../../open-sse/config/cliFingerprints";
 
 export async function GET() {
   try {
     const settings = await getSettings();
     const { password, ...safeSettings } = settings;
+
+    // Sync CLI fingerprint providers to runtime cache on load
+    if (settings.cliCompatProviders) {
+      setCliCompatProviders(settings.cliCompatProviders as string[]);
+    }
 
     const enableRequestLogs = process.env.ENABLE_REQUEST_LOGS === "true";
     const runtimePorts = getRuntimePorts();
@@ -72,6 +78,11 @@ export async function PATCH(request) {
     // Clear health check log cache if that setting was updated
     if ("hideHealthCheckLogs" in body) {
       clearHealthCheckLogCache();
+    }
+
+    // Sync CLI fingerprint providers to runtime cache
+    if ("cliCompatProviders" in body) {
+      setCliCompatProviders(body.cliCompatProviders || []);
     }
 
     const { password, ...safeSettings } = settings;

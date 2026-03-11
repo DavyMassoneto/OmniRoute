@@ -100,7 +100,10 @@
     "themeViolet": "بنفسجي ساحر",
     "themeOrange": "أورانج (Orange)",
     "themeCyan": "كيان",
-    "endpoints": "نقاط النهاية"
+    "endpoints": "نقاط النهاية",
+    "playground": "ملعب النماذج",
+    "agents": "وكلاء",
+    "cliToolsShort": "أدوات"
   },
   "themesPage": {
     "title": "المواضيع",
@@ -1730,7 +1733,8 @@
     "cacheCreationTokenDesc": "الرموز المميزة المستخدمة لإنشاء إدخالات ذاكرة التخزين المؤقت (الرجوع إلى معدل الإدخال)",
     "customPricingNote": "يمكنك تجاوز التسعير الافتراضي لنماذج محددة. تحظى التجاوزات المخصصة بالأولوية على الأسعار التي يتم اكتشافها تلقائيًا.",
     "editPricing": "تحرير التسعير",
-    "viewFullDetails": "عرض التفاصيل الكاملة"
+    "viewFullDetails": "عرض التفاصيل الكاملة",
+    "themeCoral": "مرجاني"
   },
   "translator": {
     "title": "مترجم",

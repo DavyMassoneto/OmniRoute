@@ -82,7 +82,7 @@ export class DefaultExecutor extends BaseExecutor {
       this.provider?.startsWith?.("openai-compatible-") ||
       this.provider?.startsWith?.("anthropic-compatible-")
     ) {
-      const cleanModel = model.includes("/") ? model.split("/").pop() : model;
+      const cleanModel = model.includes("/") ? model.split("/").slice(1).join("/") : model;
       return { ...body, model: cleanModel };
     }
     return body;

@@ -20,7 +20,7 @@ _Your universal API proxy — one endpoint, 36+ providers, zero downtime. Now wi
 
 </div>
 
-🌐 **Available in:** 🇺🇸 [English](README.md) | 🇧🇷 [Português (Brasil)](README.pt-BR.md) | 🇪🇸 [Español](README.es.md) | 🇫🇷 [Français](README.fr.md) | 🇮🇹 [Italiano](README.it.md) | 🇷🇺 [Русский](README.ru.md) | 🇨🇳 [中文 (简体)](README.zh-CN.md) | 🇩🇪 [Deutsch](README.de.md) | 🇮🇳 [हिन्दी](README.in.md) | 🇹🇭 [ไทย](README.th.md) | 🇺🇦 [Українська](README.uk-UA.md) | 🇸🇦 [العربية](README.ar.md) | 🇯🇵 [日本語](README.ja.md) | 🇻🇳 [Tiếng Việt](README.vi.md) | 🇧🇬 [Български](README.bg.md) | 🇩🇰 [Dansk](README.da.md) | 🇫🇮 [Suomi](README.fi.md) | 🇮🇱 [עברית](README.he.md) | 🇭🇺 [Magyar](README.hu.md) | 🇮🇩 [Bahasa Indonesia](README.id.md) | 🇰🇷 [한국어](README.ko.md) | 🇲🇾 [Bahasa Melayu](README.ms.md) | 🇳🇱 [Nederlands](README.nl.md) | 🇳🇴 [Norsk](README.no.md) | 🇵🇹 [Português (Portugal)](README.pt.md) | 🇷🇴 [Română](README.ro.md) | 🇵🇱 [Polski](README.pl.md) | 🇸🇰 [Slovenčina](README.sk.md) | 🇸🇪 [Svenska](README.sv.md) | 🇵🇭 [Filipino](README.phi.md)
+🌐 **Available in:** 🇺🇸 [English](README.md) | 🇧🇷 [Português (Brasil)](docs/i18n/pt-BR/README.md) | 🇪🇸 [Español](docs/i18n/es/README.md) | 🇫🇷 [Français](docs/i18n/fr/README.md) | 🇮🇹 [Italiano](docs/i18n/it/README.md) | 🇷🇺 [Русский](docs/i18n/ru/README.md) | 🇨🇳 [中文 (简体)](docs/i18n/zh-CN/README.md) | 🇩🇪 [Deutsch](docs/i18n/de/README.md) | 🇮🇳 [हिन्दी](docs/i18n/in/README.md) | 🇹🇭 [ไทย](docs/i18n/th/README.md) | 🇺🇦 [Українська](docs/i18n/uk-UA/README.md) | 🇸🇦 [العربية](docs/i18n/ar/README.md) | 🇯🇵 [日本語](docs/i18n/ja/README.md) | 🇻🇳 [Tiếng Việt](docs/i18n/vi/README.md) | 🇧🇬 [Български](docs/i18n/bg/README.md) | 🇩🇰 [Dansk](docs/i18n/da/README.md) | 🇫🇮 [Suomi](docs/i18n/fi/README.md) | 🇮🇱 [עברית](docs/i18n/he/README.md) | 🇭🇺 [Magyar](docs/i18n/hu/README.md) | 🇮🇩 [Bahasa Indonesia](docs/i18n/id/README.md) | 🇰🇷 [한국어](docs/i18n/ko/README.md) | 🇲🇾 [Bahasa Melayu](docs/i18n/ms/README.md) | 🇳🇱 [Nederlands](docs/i18n/nl/README.md) | 🇳🇴 [Norsk](docs/i18n/no/README.md) | 🇵🇹 [Português (Portugal)](docs/i18n/pt/README.md) | 🇷🇴 [Română](docs/i18n/ro/README.md) | 🇵🇱 [Polski](docs/i18n/pl/README.md) | 🇸🇰 [Slovenčina](docs/i18n/sk/README.md) | 🇸🇪 [Svenska](docs/i18n/sv/README.md) | 🇵🇭 [Filipino](docs/i18n/phi/README.md)
 
 ---
 
@@ -167,6 +167,16 @@ _Connect any AI-powered IDE or CLI tool through OmniRoute — free API gateway f
 - **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md), open a PR, or pick a `good first issue`
 - **Original Project**: [9router by decolua](https://github.com/decolua/9router)
 
+### 🐛 Reporting a Bug?
+
+When opening an issue, please run the system-info command and attach the generated file:
+
+```bash
+npm run system-info
+```
+
+This generates a `system-info.txt` with your Node.js version, OmniRoute version, OS details, installed CLI tools (iflow, gemini, claude, codex, antigravity, droid, etc.), Docker/PM2 status, and system packages — everything we need to reproduce your issue quickly. Attach the file directly to your GitHub issue.
+
 ---
 
 ## 🔄 How It Works
@@ -247,6 +257,7 @@ Providers like OpenAI/Codex block access from certain geographic regions. Users 
 - **Connection Tests via Proxy** — Connection tests use the configured proxy (no more direct bypass)
 - **SOCKS5 Support** — Full SOCKS5 proxy support for outbound routing
 - **TLS Fingerprint Spoofing** — Browser-like TLS fingerprint via `wreq-js` to bypass bot detection
+- **🔏 CLI Fingerprint Matching** — Reorders headers and body fields to match native CLI binary signatures, drastically reducing account flagging risk. The proxy IP is preserved — you get both stealth **and** IP masking simultaneously
 
 </details>
 
@@ -258,6 +269,7 @@ Not everyone can pay $20–200/month for AI subscriptions. Students, devs from e
 **How OmniRoute solves it:**
 
 - **Free Tier Providers Built-in** — Native support for 100% free providers: iFlow (8 unlimited models), Qwen (3 unlimited models), Kiro (Claude for free), Gemini CLI (180K/month free)
+- **Ollama Cloud** — Cloud-hosted Ollama models at `api.ollama.com` with free "Light usage" tier; use `ollamacloud/<model>` prefix
 - **Free-Only Combos** — Chain `gc/gemini-3-flash → if/kimi-k2-thinking → qw/qwen3-coder-plus` = $0/month with zero downtime
 - **NVIDIA NIM Free Credits** — 1000 free credits integrated
 - **Cost Optimized Strategy** — Routing strategy that automatically chooses the cheapest available provider
@@ -356,6 +368,7 @@ When a call fails, the dev doesn't know if it was a rate limit, expired token, w
 - **Translator Playground** — 4 debugging modes: Playground (format translation), Chat Tester (round-trip), Test Bench (batch), Live Monitor (real-time)
 - **Request Telemetry** — p50/p95/p99 latency + X-Request-Id tracing
 - **File-Based Logging with Rotation** — Console interceptor captures everything to JSON log with size-based rotation
+- **System Info Report** — `npm run system-info` generates `system-info.txt` with your full environment (Node version, OmniRoute version, OS, CLI tools, Docker/PM2 status). Attach it when reporting issues for instant triage.
 
 </details>
 
@@ -402,7 +415,7 @@ AI isn't just chat completion. Devs need to generate images, transcribe audio, c
 - **Text-to-Video** — `/v1/videos/generations` — ComfyUI (AnimateDiff, SVD) and SD WebUI
 - **Text-to-Music** — `/v1/music/generations` — ComfyUI (Stable Audio Open, MusicGen)
 - **Audio Transcription** — `/v1/audio/transcriptions` — Whisper + Nvidia NIM, HuggingFace, Qwen3
-- **Text-to-Speech** — `/v1/audio/speech` — ElevenLabs, Nvidia NIM, HuggingFace, Coqui, Tortoise, Qwen3, + existing providers
+- **Text-to-Speech** — `/v1/audio/speech` — ElevenLabs, Nvidia NIM, HuggingFace, Coqui, Tortoise, Qwen3, **Inworld**, **Cartesia**, **PlayHT**, + existing providers
 - **Moderations** — `/v1/moderations` — Content safety checks
 - **Reranking** — `/v1/rerank` — Document relevance reranking
 - **Responses API** — Full `/v1/responses` support for Codex
@@ -888,6 +901,18 @@ When minimized, OmniRoute lives in your system tray with quick actions:
 
 OmniRoute v2.0 is built as an operational platform, not just a relay proxy.
 
+### 🚀 New in v2.0.9+ — Playground, CLI Fingerprints & ACP
+
+| Feature                                    | What It Does                                                                                                                                                                                                                            |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🎮 **Model Playground**                    | Dashboard page to test any model directly — provider/model/endpoint selectors, Monaco Editor, streaming, abort, timing                                                                                                                  |
+| 🔏 **CLI Fingerprint Matching**            | Per-provider header/body ordering to match native CLI signatures — toggle per provider in Settings > Security. **Your proxy IP is preserved**                                                                                           |
+| 🤝 **ACP Support (Agent Client Protocol)** | CLI agent discovery (Codex, Claude, Goose, Gemini CLI, OpenClaw + 9 more), process spawner, `/api/acp/agents` endpoint                                                                                                                  |
+| 🤖 **ACP Agents Dashboard**                | Debug › Agents page — grid of 14 agents with install status, version, custom agent form for any CLI tool. **OpenCode** users get a "Download opencode.json" button that auto-generates a ready-to-use config with all available models. |
+| 🔧 **Custom Model `apiFormat` Routing**    | Custom models with `apiFormat: "responses"` now correctly route to the Responses API translator                                                                                                                                         |
+| 🏢 **Codex Workspace Isolation**           | Multiple Codex workspaces per email — OAuth correctly separates connections by workspace ID                                                                                                                                             |
+| 🔄 **Electron Auto-Update**                | Desktop app checks for updates + auto-install on restart                                                                                                                                                                                |
+
 ### 🤖 Agent & Protocol Operations (v2.0)
 
 | Feature                               | What It Does                                                                                       |
@@ -936,18 +961,19 @@ OmniRoute v2.0 is built as an operational platform, not just a relay proxy.
 
 ### 🛡️ Resilience, Security & Governance
 
-| Feature                             | What It Does                                               |
-| ----------------------------------- | ---------------------------------------------------------- |
-| 🔌 **Circuit Breakers**             | Per-model trip/recover with threshold controls             |
-| 🎯 **Endpoint-Aware Models**        | Custom models declare supported endpoints + API format     |
-| 🛡️ **Anti-Thundering Herd**         | Mutex + semaphore protections on retry/rate events         |
-| 🧠 **Semantic + Signature Cache**   | Cost/latency reduction with two cache layers               |
-| ⚡ **Request Idempotency**          | Duplicate protection window                                |
-| 🔒 **TLS Fingerprint Spoofing**     | Better compatibility with anti-bot filtered providers      |
-| 🌐 **IP Filtering**                 | Allowlist/blocklist control for exposed deployments        |
-| 📊 **Editable Rate Limits**         | Configurable global/provider-level limits with persistence |
-| 🔑 **API Key Management + Scoping** | Secure key issuance/rotation and model/provider controls   |
-| 🛡️ **Protected `/models`**          | Optional auth gating and provider hiding for model catalog |
+| Feature                             | What It Does                                                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------------- |
+| 🔌 **Circuit Breakers**             | Per-model trip/recover with threshold controls                                         |
+| 🎯 **Endpoint-Aware Models**        | Custom models declare supported endpoints + API format                                 |
+| 🛡️ **Anti-Thundering Herd**         | Mutex + semaphore protections on retry/rate events                                     |
+| 🧠 **Semantic + Signature Cache**   | Cost/latency reduction with two cache layers                                           |
+| ⚡ **Request Idempotency**          | Duplicate protection window                                                            |
+| 🔒 **TLS Fingerprint Spoofing**     | Browser-like TLS fingerprint — **reduces bot detection and account flagging**          |
+| 🔏 **CLI Fingerprint Matching**     | Matches native CLI request signatures — **reduces ban risk while preserving proxy IP** |
+| 🌐 **IP Filtering**                 | Allowlist/blocklist control for exposed deployments                                    |
+| 📊 **Editable Rate Limits**         | Configurable global/provider-level limits with persistence                             |
+| 🔑 **API Key Management + Scoping** | Secure key issuance/rotation and model/provider controls                               |
+| 🛡️ **Protected `/models`**          | Optional auth gating and provider hiding for model catalog                             |
 
 ### 📊 Observability & Analytics
 
@@ -963,15 +989,17 @@ OmniRoute v2.0 is built as an operational platform, not just a relay proxy.
 
 ### ☁️ Deployment & Platform
 
-| Feature                      | What It Does                                             |
-| ---------------------------- | -------------------------------------------------------- |
-| 🌐 **Deploy Anywhere**       | Localhost, VPS, Docker, Cloud environments               |
-| 💾 **Cloud Sync**            | Configuration sync via cloud worker                      |
-| 🔄 **Backup/Restore**        | Export/import and disaster recovery flows                |
-| 🧙 **Onboarding Wizard**     | First-run guided setup                                   |
-| 🔧 **CLI Tools Dashboard**   | One-click setup for popular coding tools                 |
-| 🌐 **i18n (30 languages)**   | Full dashboard + docs language support with RTL coverage |
-| 📂 **Custom Data Directory** | `DATA_DIR` override for storage location                 |
+| Feature                       | What It Does                                             |
+| ----------------------------- | -------------------------------------------------------- |
+| 🌐 **Deploy Anywhere**        | Localhost, VPS, Docker, Cloud environments               |
+| 💾 **Cloud Sync**             | Configuration sync via cloud worker                      |
+| 🔄 **Backup/Restore**         | Export/import and disaster recovery flows                |
+| 🧙 **Onboarding Wizard**      | First-run guided setup                                   |
+| 🔧 **CLI Tools Dashboard**    | One-click setup for popular coding tools                 |
+| 🎮 **Model Playground**       | Test any provider/model/endpoint from the dashboard      |
+| 🔏 **CLI Fingerprint Toggle** | Per-provider fingerprint matching in Settings > Security |
+| 🌐 **i18n (30 languages)**    | Full dashboard + docs language support with RTL coverage |
+| 📂 **Custom Data Directory**  | `DATA_DIR` override for storage location                 |
 
 ### Feature Deep Dive
 
@@ -1676,6 +1704,8 @@ gh release create v2.0.0 --title "v2.0.0" --generate-notes
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=diegosouzapw/OmniRoute&type=Date" />
  </picture>
 </a>
+
+> 📈 **[View live star history on star-history.com](https://star-history.com/#diegosouzapw/OmniRoute&Date)** — The embedded chart may be cached. Click the link for real-time data.
 
 ---
 

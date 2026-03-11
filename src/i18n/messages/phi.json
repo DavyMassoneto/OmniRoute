@@ -100,7 +100,10 @@
     "themeViolet": "Violet",
     "themeOrange": "Orange",
     "themeCyan": "Cyan",
-    "endpoints": "Mga Endpoint"
+    "endpoints": "Mga Endpoint",
+    "playground": "Playground",
+    "agents": "Mga Agent",
+    "cliToolsShort": "Mga Tool"
   },
   "themesPage": {
     "title": "Themes",
@@ -1730,7 +1733,8 @@
     "cacheCreationTokenDesc": "Mga token na ginamit upang lumikha ng mga entry sa cache (fallback sa rate ng pag-input)",
     "customPricingNote": "Maaari mong i-override ang default na pagpepresyo para sa mga partikular na modelo. Mas inuuna ang mga custom na override kaysa sa awtomatikong natukoy na pagpepresyo.",
     "editPricing": "I-edit ang Pagpepresyo",
-    "viewFullDetails": "Tingnan ang Buong Detalye"
+    "viewFullDetails": "Tingnan ang Buong Detalye",
+    "themeCoral": "Coral"
   },
   "translator": {
     "title": "Tagasalin",

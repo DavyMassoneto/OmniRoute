@@ -100,7 +100,10 @@
     "themeViolet": "Violet",
     "themeOrange": "Orange",
     "themeCyan": "Cyan",
-    "endpoints": "Endpoint"
+    "endpoints": "Endpoint",
+    "playground": "Playground",
+    "agents": "Agenti",
+    "cliToolsShort": "Strumenti"
   },
   "themesPage": {
     "title": "Themes",
@@ -1730,7 +1733,8 @@
     "cacheCreationTokenDesc": "Token utilizzati per creare voci nella cache (fallback alla velocità di input)",
     "customPricingNote": "Puoi sostituire i prezzi predefiniti per modelli specifici. Le sostituzioni personalizzate hanno la priorità sui prezzi rilevati automaticamente.",
     "editPricing": "Modifica prezzi",
-    "viewFullDetails": "Visualizza i dettagli completi"
+    "viewFullDetails": "Visualizza i dettagli completi",
+    "themeCoral": "Corallo"
   },
   "translator": {
     "title": "Traduttore",

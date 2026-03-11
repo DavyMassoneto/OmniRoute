@@ -18,18 +18,27 @@ const navItemDefs = [
   { href: "/dashboard/api-manager", i18nKey: "apiManager", icon: "vpn_key" },
   { href: "/dashboard/providers", i18nKey: "providers", icon: "dns" },
   { href: "/dashboard/combos", i18nKey: "combos", icon: "layers" },
-  { href: "/dashboard/logs", i18nKey: "logs", icon: "description" },
   { href: "/dashboard/costs", i18nKey: "costs", icon: "account_balance_wallet" },
   { href: "/dashboard/analytics", i18nKey: "analytics", icon: "analytics" },
   { href: "/dashboard/limits", i18nKey: "limits", icon: "tune" },
-  { href: "/dashboard/health", i18nKey: "health", icon: "health_and_safety" },
-  { href: "/dashboard/cli-tools", i18nKey: "cliTools", icon: "terminal" },
+];
+
+const cliItemDefs = [
+  { href: "/dashboard/cli-tools", i18nKey: "cliToolsShort", icon: "terminal" },
+  { href: "/dashboard/agents", i18nKey: "agents", icon: "smart_toy" },
+];
+
+const debugItemDefs = [
+  { href: "/dashboard/translator", i18nKey: "translator", icon: "translate" },
+  { href: "/dashboard/playground", i18nKey: "playground", icon: "science" },
   { href: "/dashboard/media", i18nKey: "media", icon: "auto_awesome" },
 ];
 
-const debugItemDefs = [{ href: "/dashboard/translator", i18nKey: "translator", icon: "translate" }];
-
-const systemItemDefs = [{ href: "/dashboard/settings", i18nKey: "settings", icon: "settings" }];
+const systemItemDefs = [
+  { href: "/dashboard/health", i18nKey: "health", icon: "health_and_safety" },
+  { href: "/dashboard/logs", i18nKey: "logs", icon: "description" },
+  { href: "/dashboard/settings", i18nKey: "settings", icon: "settings" },
+];
 
 const helpItemDefs = [
   { href: "/docs", i18nKey: "docs", icon: "menu_book" },
@@ -106,6 +115,7 @@ export default function Sidebar({
   // Resolve i18n keys → labels
   const resolveItems = (defs) => defs.map((d) => ({ ...d, label: t(d.i18nKey) }));
   const navItems = resolveItems(navItemDefs);
+  const cliItems = resolveItems(cliItemDefs);
   const debugItems = resolveItems(debugItemDefs);
   const systemItems = resolveItems(systemItemDefs);
   const helpItems = resolveItems(helpItemDefs);
@@ -163,7 +173,7 @@ export default function Sidebar({
     <>
       <aside
         className={cn(
-          "flex flex-col border-r border-black/5 dark:border-white/5 bg-vibrancy backdrop-blur-xl transition-all duration-300 ease-in-out",
+          "flex flex-col h-full border-r border-black/5 dark:border-white/5 bg-vibrancy backdrop-blur-xl transition-all duration-300 ease-in-out",
           collapsed ? "w-16" : "w-72"
         )}
       >
@@ -233,6 +243,17 @@ export default function Sidebar({
           )}
         >
           {navItems.map(renderNavLink)}
+
+          {/* CLI section */}
+          <div className="pt-4 mt-2">
+            {!collapsed && (
+              <p className="px-4 text-xs font-semibold text-text-muted/60 uppercase tracking-wider mb-2">
+                CLI
+              </p>
+            )}
+            {collapsed && <div className="border-t border-black/5 dark:border-white/5 mb-2" />}
+            {cliItems.map(renderNavLink)}
+          </div>
 
           {/* Debug section */}
           {showDebug && (

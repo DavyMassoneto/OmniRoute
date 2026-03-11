@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+---
+
+## [2.2.7] — 2026-03-10
+
+> ### Bug Fixes & Dependency Updates
+
+### Bug Fixes
+
+- **Docker startup crash (#292)** — Fixed missing `bootstrap-env.mjs` in the runtime image. The Dockerfile runner stage now copies the file from the builder stage (PR #293).
+- **Google CLI stale projectId (#394)** — Antigravity and Gemini CLI executors now prefer the OAuth-stored `projectId` over `body.project` to prevent 403/404 errors from stale cached values. Includes type-safe body assignment (PR #294).
+- **Tool-calling 400 errors (#291)** — Empty `name: ""` fields in `messages[]` and `input[]` are now stripped before forwarding to upstream providers (OpenAI, Codex) that reject them (PR #300).
+- Bump `hono` from 4.12.4 to 4.12.7 (security patch) (PR #298)
+
+---
+
 ## [2.0.2] — 2026-03-05
 
 > ### 🐛 Bug Fixes & ✨ Endpoint-Aware Model Management
@@ -443,6 +460,641 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔒 Security Fix
 
 - **Auth bypass after onboarding** — Fixed regression where users could access the dashboard without authentication after upgrading from older versions. The "no password" safeguard (for fresh installs) was incorrectly firing after onboarding was complete, allowing unauthenticated access when `setupComplete=true` but the password DB row was missing ([#151](https://github.com/diegosouzapw/OmniRoute/issues/151))
+
+---
+
+## [2.2.6] — 2026-03-10
+
+> ### 🐛 Fix Claude Thinking Tokens Invisible in Passthrough Mode
+
+### Bug Fixes
+
+- **Claude thinking tokens not visible (#289)** — When routing through Antigravity OAuth or any Claude provider, thinking blocks were being emitted as regular `delta.content` with `<think>/<\/think>` XML wrappers. Fixed: now correctly maps `thinking_delta` events to `delta.reasoning_content` so clients like Claude Code, Cursor, and Windsurf display the thinking panel properly.
+
+---
+
+## [2.2.5] — 2026-03-10
+
+> ### 🔧 Zero-Config Bootstrap · 🐛 Electron Black Screen Fix
+
+### Features
+
+- **Zero-config bootstrap (#252, #249)** — OmniRoute now auto-generates required secrets on first run across all deployment modes (npm, Docker, Electron Desktop App):
+  - `JWT_SECRET` (64-byte hex) — required for auth/sessions
+  - `STORAGE_ENCRYPTION_KEY` (32-byte hex) — required for SQLite encryption
+  - `API_KEY_SECRET` (32-byte hex) — required for API key signing
+  - Secrets are persisted to `{DATA_DIR}/server.env` and survive restarts, Docker volume remounts, and upgrades
+  - Friendly startup warnings if OAuth secrets (Antigravity, iFlow, Gemini) are not configured
+  - New **`scripts/bootstrap-env.mjs`** module — single source of truth for zero-config initialization
+
+### Bug Fixes
+
+- **Electron black screen on macOS/Windows/Linux** — The Next.js server was crashing silently because `JWT_SECRET` and `STORAGE_ENCRYPTION_KEY` are never present in desktop OS environments. Fixed by calling `bootstrapEnv()` before spawning `server.js`, with secrets persisted to Electron's `userData` directory.
+- **Dashboard bootstrap banner** — Added dismissable amber warning banner on the dashboard home when running in zero-config mode, showing where `server.env` is stored and how to customize secrets.
+
+### Note for Docker users
+
+Previously, `--env-file .env` was required to pass secrets to the container. Now OmniRoute will generate and persist them automatically in the mounted volume. Existing `DATA_DIR` secrets are always respected.
+
+---
+
+## [2.2.4] — 2026-03-10
+
+> ### 🔧 CI Fixes
+
+### CI
+
+- **docs-sync fix** — Updated `docs/openapi.yaml` version from `2.2.0` to `2.2.3` (was out of sync with `package.json`, causing CI lint failure)
+- **CHANGELOG format** — Added required `## [Unreleased]` section at top of `CHANGELOG.md` (required by `check:docs-sync` script)
+- **Electron Linux** — Added `gem install fpm` step to `electron-release.yml` Linux build job; `fpm` is required by `electron-builder` to package `.deb` installers but was not pre-installed on `ubuntu-latest` runners
+- **Docker publish** — Added `DOCKER_BUILDKIT_INLINE_CACHE` env; previous `502 error writing layer blob` was a transient Docker Hub network error
+
+---
+
+## [2.2.3] — 2026-03-10
+
+> ### 🐛 Bug Fixes · 🔧 Reliability
+
+### Bug Fixes
+
+- **Antigravity/Gemini CLI: remove fake projectId fallback (#285)** — OmniRoute was generating random fallback project IDs (e.g. `useful-fuze-a04c5`) when OAuth credentials lacked a real GCP `projectId`. This caused confusing `Permission denied on resource project` and `Verify your account` errors from Google. Now throws a clear actionable error: _reconnect OAuth so OmniRoute can load your real Cloud Code project_. Affects `antigravity.ts`, `openai-to-gemini.ts`, `geminiHelper.ts`.
+- **Claude Code: filter empty-named tool_use blocks across all message roles (#288)** — Pass 1.4 only filtered empty tool names from `assistant` messages. Extended to all roles (user, system). Also filters `tool_result` blocks missing `tool_use_id`, and top-level `body.tools` declarations with empty names. Prevents `Invalid input[x].name: empty string` 400 errors from Claude API.
+- **Docker: explicit @swc/helpers copy (#288)** — Added `COPY --from=builder /app/node_modules/@swc/helpers` to Dockerfile `runner-base` stage. The standalone tracer doesn't always include this package, causing runtime `MODULE_NOT_FOUND` crashloops.
+
+---
+
+## [2.2.2] — 2026-03-10
+
+> ### ✨ New Features · 🔀 Model Aliases
+
+### New Features
+
+- **system-info.mjs (#280)** — New `npm run system-info` command that collects Node.js version, OmniRoute version, OS info, CLI tool versions (iflow, gemini, claude, codex, antigravity, droid, openclaw, kilo, cursor, aider), Docker/PM2 status, and system packages. Outputs `system-info.txt` for easy attachment to bug reports.
+
+### Model Aliases
+
+- **Kimi K2/K2.5 Fireworks aliases (#265)** — Built-in aliases added: `fireworks/accounts/fireworks/models/kimi-k2p5` and `kimi-k2p5` → `moonshotai/Kimi-K2.5`; same for `kimi-k2` → `moonshotai/Kimi-K2`. Fireworks long path model names now auto-resolve.
+- **Mistral short aliases (#278)** — `mistral-large` → `mistral-large-latest`, `mistral-small` → `mistral-small-latest`, `codestral` → `codestral-latest`.
+- **Llama short aliases** — `llama-3.3` → `llama-3.3-70b-versatile`, `llama-3-70b` → `llama-3.3-70b-versatile`, `llama-3-8b` → `llama3-8b-8192`.
+- **Custom aliases** — Users can define their own aliases in **Settings → Model Aliases** tab. Example: `gpt-5.4` → `cx/gpt-5.4`.
+
+---
+
+## [2.2.1] — 2026-03-10
+
+> ### 🐛 Bug Fixes · 🔐 Security · 🔧 CI
+
+### Bug Fixes
+
+- **Gemini image routing (#273)** — `gemini-3.1-flash-image-preview` was missing from the `antigravity` image provider registry in `imageRegistry.ts`, causing image generation to fall through to the chat handler. Added alongside `gemini-2.5-flash-preview-image-generation`.
+- **Ollama Cloud model listing (#276)** — `ollama-cloud` was absent from `PROVIDER_MODELS_CONFIG` in the models route, causing 400 errors when listing models from `api.ollama.com`. Entry added.
+- **Missing apiKey error clarity (#277)** — When login is disabled and a provider has no API key configured, the model import route now returns `400` with a clear message instead of a generic `401 Unauthorized`.
+
+### Security
+
+- **TLS validation re-enabled (GHSA-50)** — `mitm/server.ts`: `rejectUnauthorized` now defaults to `true`. Opt-out only via `MITM_DISABLE_TLS_VERIFY=1`.
+- **Path traversal hardening (GHSA-41–49)** — Added `safePath()`, `safeProfilePath()`, `safeLogPath()` helpers across `backupService.ts`, `db/backup.ts`, `codex-profiles/route.ts`, and `mitm/server.ts`. All user-supplied IDs/filenames are now anchored within their allowed directories using `path.resolve()` + bounds check.
+- **Prototype pollution fix (GHSA-18–20)** — `usageHistory.ts`: `pendingRequests` maps now use `Object.create(null)` + `hasOwnProperty` guards, preventing `__proto__` / `constructor` injection via crafted provider IDs.
+- **Dependency: dompurify updated to ^3.3.2** — Resolves CVE-2026-0540 (XSS in rendered HTML).
+- **GitHub Actions: added `permissions: contents: read`** — Prevents token over-permission in CI jobs.
+
+### CI
+
+- **Lock file sync** — Added `@swc/helpers: "^0.5.19"` override in `package.json`; regenerated `package-lock.json`. Fixes `npm ci` failures across `ci.yml` and `docker-publish.yml`.
+- **npm-publish: skip if version exists** — Workflow now checks registry before publishing; exits cleanly with a warning instead of failing with `E403` if the version is already on npm.
+- **npm-publish: use `npm install` instead of `npm ci`** — Prevents publish failures when a tag commit's lock file is slightly out of sync.
+- **Lint: `cursor.ts` any-budget** — Replaced `any` with `unknown` + type narrowing in `isToolBoundaryAbort()`.
+
+---
+
+## [2.2.0] — 2026-03-10
+
+> ### 🔧 Bug Fixes · Provider Support · CI Recovery
+
+### Bug Fixes
+
+- **Cursor tool-call loop (#275/#274)** — Stabilized Cursor executor to stop double-translating tool results. Set-based `finalizedIds` for O(1) dedup, byte guard (`0x7b`) before payload `.toString()`, `escapeXml()` to prevent tag injection, and converted all debug `console.log` to `debugLog()`. Fixes the 400 Bad Request loop that corrupted multi-turn Cursor sessions.
+- **A/V provider validation (#281)** — Added `validateElevenLabsProvider` (GET `/v1/voices` with `xi-api-key`) and `validateInworldProvider` (POST `/tts/v1/voice` with Basic auth) so both providers can be test-connected without false 400 errors.
+- **OpenAI-compatible Add Connection button (#272)** — "Add Connection" button was hidden behind `!isCompatible` guard in the Connections card. Button now appears for compatible providers when 0 connections exist, limited to 1 (matches single-key-per-node policy).
+- **CI: unit tests** — Fixed circuit breaker tests using wrong instance keys (`combo:groq` → `combo:groq/llama-3.3-70b`).
+- **CI: E2E protocol-visibility** — Updated spec to click "Protocols" tab before asserting MCP/A2A links (now tabs inside `/dashboard/endpoint`).
+- **CI: i18n** — Added missing `header.mcp`, `header.mcpDescription`, `header.a2a`, `header.a2aDescription` keys to `en.json`.
+
+### New Features
+
+- **Kimi Coding plan quota display (#279)** — New `getKimiUsage()` with `X-Msh-*` device headers. Parses weekly quota + rate-limit breakdown from `/v1/usages`. Wires `kimi-coding` into the provider usage switch; adds quota capability flag.
+
+### Dependencies
+
+- **Dev dependencies** — Bumped `@playwright/test`, `@types/react`, `eslint-plugin-*` and 2 others (#264).
+- **Prod dependencies** — Bumped 2 production packages (#263).
+
+---
+
+## [2.1.2] — 2026-03-09
+
+> ### 🔨 CI Green + Electron .deb + Link Fixes
+
+### Bug Fixes
+
+- **CI: `check:docs-sync`** — fixed 2 failures: bumped `docs/openapi.yaml` version to 2.1.1 (was 2.0.0), added required `## [Unreleased]` section to CHANGELOG.
+- **CI: npm-publish workflow** — rewrote to use `npm ci --ignore-scripts` + explicit `node scripts/prepublish.mjs` with `JWT_SECRET` env; fixes the prepublish loop that caused every npm CI publish to fail.
+- **README.md language bar** — fixed all 29 broken links that pointed to root `README.<lang>.md` (now `docs/i18n/<lang>/README.md`).
+- **docs/i18n READMEs** — fixed back-links to English (`../../README.md`) and cross-links to sibling languages.
+
+### New Features
+
+- **Electron Linux `.deb` package** — added `deb` target (x64 + arm64) to `electron/package.json`; updated `electron-release.yml` to collect and attach `.deb` files to GitHub releases alongside `.AppImage`.
+
+> ### 🔧 CI Fix + Docs Reorganization
+
+### Bug Fixes
+
+- **CI: fixed `any`-budget violation in `open-sse/services/usage.ts`** — replaced 5 explicit `any` annotations with proper TypeScript types (`UsageQuota`, `JsonRecord`, `Error`), restoring the green CI lint gate.
+- **Deleted all duplicate draft GitHub releases** — automated workflow was creating unnamed draft releases on each push; cleaned up all draft artifacts for v2.0.17–v2.1.0.
+
+### Documentation
+
+- **Root cleanup**: moved all 29 `README.<lang>.md` files from the project root into their correct `docs/i18n/<lang>/README.md` locations. The root now contains only `README.md` (English).
+- **i18n sync**: all 11 `docs/*.md` files synced with language bar headers to all 30 `docs/i18n/<lang>/` directories (319 file updates across ar, bg, da, de, es, fi, fr, he, hu, id, in, it, ja, ko, ms, nl, no, phi, pl, pt, pt-BR, ro, ru, sk, sv, th, uk-UA, vi, zh-CN).
+
+---
+
+## [2.1.0] — 2026-03-09
+
+> ### 🗺️ Full Provider-UI Gap Audit — All Backends Now Accessible from Dashboard
+
+### ✨ New Features
+
+- **7 missing API-key providers added to Providers page** — ElevenLabs, Cartesia, PlayHT, Inworld, SD WebUI, ComfyUI, and Ollama Cloud now all appear in `/dashboard/providers` with API key configuration cards. Previously these providers existed only in the backend with no UI entry point.
+
+- **Media page: provider + model selectors for all 5 modalities** — `/dashboard/media` now has a **Provider** dropdown and a **Model** dropdown for every tab. Selecting a provider shows only its models:
+  - 🖼️ **Image**: OpenAI, xAI, Together, Fireworks, Nebius, Hyperbolic, NanoBanana, SD WebUI, ComfyUI (9 providers)
+  - 🎬 **Video**: ComfyUI (AnimateDiff, SVD), SD WebUI (2 providers)
+  - 🎵 **Music**: ComfyUI (Stable Audio Open, MusicGen)
+  - 🔊 **Speech**: OpenAI, ElevenLabs, Deepgram, Hyperbolic, NVIDIA, Inworld, Cartesia, PlayHT, HuggingFace, Qwen (10 providers). Voice dropdown updates per provider.
+  - 🎙️ **Transcription**: New tab — OpenAI Whisper, Groq, Deepgram, AssemblyAI, NVIDIA, HuggingFace, Qwen (7 providers). File upload instead of text prompt.
+
+- **Playground: 4 new endpoint options** — Audio Transcription (`/v1/audio/transcriptions`), Video Generation (`/v1/videos/generations`), Music Generation (`/v1/music/generations`), Rerank (`/v1/rerank`). Previously only Chat, Responses, Images, Embeddings, Speech were available.
+
+- **CLI Tools: OpenCode + Kiro** — Both tools now appear in `/dashboard/cli-tools` with step-by-step setup guides. OpenCode was already detected in Agents but had no configuration screen.
+
+- **Agents: expanded CLI fingerprint providers** — kiro, cursor, kimi-coding, kilocode, cline added to the CLI fingerprint toggle list (previously only codex, claude, github, antigravity).
+
+### 🧹 Maintenance
+
+- Deleted 3 stale remote branches (`features-agente-mcp-a2a`, `fix/issue-218-round-robin-lastUsedAt`, `fix/resolve-open-issues`) — all their changes were already in main.
+- Added minimal `layout.tsx` to all error-page routes (`400`, `401`, `403`, `408`, `429`, `500`, `502`, `503`) to fix Next.js standalone build.
+
+### 📁 Files Changed
+
+| File                                                      | Change                                                     |
+| --------------------------------------------------------- | ---------------------------------------------------------- |
+| `src/shared/constants/providers.ts`                       | Add 7 missing APIKEY_PROVIDERS                             |
+| `src/shared/constants/cliTools.ts`                        | Add opencode, kiro entries                                 |
+| `src/app/(dashboard)/dashboard/media/MediaPageClient.tsx` | Full rewrite — provider/model selectors, transcription tab |
+| `src/app/(dashboard)/dashboard/playground/page.tsx`       | Add 4 new endpoint options                                 |
+| `src/app/(dashboard)/dashboard/agents/page.tsx`           | Expand cliCompatProviders list                             |
+| `src/app/{400..503}/layout.tsx`                           | Add minimal layouts to fix Next.js build                   |
+
+---
+
+## [2.0.20] — 2026-03-09
+
+> ### 🔊 TTS Expansion + 📱 Mobile UX + 🏷️ Friendly Names
+
+### ✨ New Features
+
+- **Inworld TTS provider** (`#248`) — Cloud TTS via `https://api.inworld.ai/tts/v1/voice`; Basic auth; JSON response with base64 `audioContent` decoded to binary. Use prefix `inworld/<model-id>`. Available models: `inworld-tts-1.5-max`, `inworld-tts-1.5-mini`.
+
+- **Cartesia TTS provider** (`#248`) — Cloud TTS via `https://api.cartesia.ai/tts/bytes`; `X-API-Key` + `Cartesia-Version: 2024-06-10` headers; returns binary audio stream. Use prefix `cartesia/<model-id>`. Available models: `sonic-2`, `sonic-3`. Voice is mapped via voice ID.
+
+- **PlayHT TTS provider** (`#248`) — Cloud TTS via `https://api.play.ht/api/v2/tts/stream`; dual auth `X-USER-ID` + `Authorization: Bearer` (store token as `userId:apiKey`). Use prefix `playht/<model-id>`. Available models: `PlayDialog`, `Play3.0-mini`.
+
+- **ElevenLabs voice presets in dashboard** (`#248`) — `/dashboard/media` → Speech tab now shows provider-aware voice dropdowns: ElevenLabs (9 premade voices), Cartesia (3 preset voices), Deepgram Aura (5 voices), Inworld (2 voices), OpenAI (6 standard voices). Voice list updates automatically based on the model prefix typed.
+
+- **Speech tab in `/dashboard/media`** (`#248`) — New "Text to Speech" tab alongside Image/Video/Music. Includes model text input (supports all provider prefixes), voice/format selectors, and an inline `<audio>` player with Blob URL + download button.
+
+- **Text to Speech in `/dashboard/playground`** (`#248`) — New endpoint option; pre-filled body with model/input/voice/response_format; binary audio responses auto-rendered in an inline audio player instead of JSON.
+
+- **Friendly display names** (`#260`) — New `src/lib/display/names.ts` with `getAccountDisplayName()` (name → displayName → email → Account #XXXXXX) and `getProviderDisplayName()` (node.name → node.prefix → de-UUIDed ID). Applied to `usageStats.ts` and `rate-limits/route.ts` to replace raw UUID fallbacks.
+
+### 📱 Mobile UX (`#261`)
+
+- **Sidebar scroll on short screens** — Mobile sidebar wrapper now uses `h-dvh` for true viewport height; `aside` receives `h-full` so the inner `nav` can actually scroll on short devices.
+- **Providers page action areas** — All 4 section headers changed from `flex justify-between` to `flex flex-wrap` so multi-button action bars wrap gracefully on narrow screens.
+
+### 📁 New Files
+
+| File                       | Purpose                                                      |
+| -------------------------- | ------------------------------------------------------------ |
+| `src/lib/display/names.ts` | Centralized friendly-name helpers for accounts and providers |
+
+### 📁 Files Changed
+
+| File                                                      | Change                                                                  |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `open-sse/config/audioRegistry.ts`                        | Add Inworld, Cartesia, PlayHT to `AUDIO_SPEECH_PROVIDERS`               |
+| `open-sse/handlers/audioSpeech.ts`                        | Add `handleInworldSpeech`, `handleCartesiaSpeech`, `handlePlayHtSpeech` |
+| `src/app/(dashboard)/dashboard/media/MediaPageClient.tsx` | Full rewrite with Speech tab + provider-aware voice presets             |
+| `src/app/(dashboard)/dashboard/playground/page.tsx`       | Add Speech endpoint option + audio Blob URL response renderer           |
+| `src/app/(dashboard)/dashboard/providers/page.tsx`        | `flex-wrap` mobile fix for section headers                              |
+| `src/lib/usage/usageStats.ts`                             | Use `getAccountDisplayName()`                                           |
+| `src/app/api/rate-limits/route.ts`                        | Use `getAccountDisplayName()`                                           |
+| `src/shared/components/Sidebar.tsx`                       | Add `h-full` to aside                                                   |
+| `src/shared/components/layouts/DashboardLayout.tsx`       | Add `h-dvh` to mobile sidebar wrapper                                   |
+
+---
+
+## [2.0.19] — 2026-03-09
+
+> ### 🔌 New Provider: Ollama Cloud + 🔒 Security Hardening
+
+### ✨ New Features
+
+- **Ollama Cloud provider** (`#255`, alias: `ollamacloud`) — API-key provider via `https://api.ollama.com/v1` (OpenAI-compatible). Use any cloud model with the `ollamacloud/<model>` prefix. Generate API keys at https://ollama.com/settings/api-keys. Pre-loaded models: Gemma 3 27B, Llama 3.3 70B, Qwen3 72B, Devstral 24B, DeepSeek R2 671B, Phi 4 14B, Mistral Small 3.2 24B. Passthrough model names also supported.
+
+### 🔒 Security Fixes (`#258`)
+
+- **CRITICAL — DB export endpoint unprotected** — Added `isAuthRequired + isAuthenticated` guard to `GET /api/db-backups/export`. Previously any unauthenticated user could download the full SQLite database (containing OAuth tokens and API keys).
+
+- **CRITICAL — DB import endpoint unprotected** — Added `isAuthRequired + isAuthenticated` guard to `POST /api/db-backups/import`. Previously any unauthenticated user could replace the application database, effectively taking admin control.
+
+- **HIGH — Cursor auto-import endpoint unprotected** — Added auth guard to `GET /api/oauth/cursor/auto-import`. Previously any unauthenticated user could read Cursor IDE access tokens from the local machine.
+
+- **HIGH — Kiro auto-import endpoint unprotected** — Added auth guard to `GET /api/oauth/kiro/auto-import`. Previously any unauthenticated user could read AWS SSO refresh tokens from the local filesystem.
+
+- **LOW (×4) — Non-constant-time string comparison (CWE-208)** — Replaced `===` with `safeEqual()` via `crypto.timingSafeEqual()` at all 4 email/workspaceId comparison sites in the OAuth route, preventing timing-oracle attacks.
+
+- **False positive — `package.json` `reset-password`** — The scanner flagged `omniroute-reset-password` (a CLI binary name) as a hardcoded password. This is not a credential; no action required.
+
+### 📁 Files Changed
+
+| File                                             | Change                                    |
+| ------------------------------------------------ | ----------------------------------------- |
+| `open-sse/config/providerRegistry.ts`            | Add `ollama-cloud` registry entry         |
+| `src/app/api/db-backups/export/route.ts`         | Add auth guard (CRITICAL)                 |
+| `src/app/api/db-backups/import/route.ts`         | Add auth guard (CRITICAL)                 |
+| `src/app/api/oauth/cursor/auto-import/route.ts`  | Add auth guard (HIGH)                     |
+| `src/app/api/oauth/kiro/auto-import/route.ts`    | Add auth guard (HIGH)                     |
+| `src/app/api/oauth/[provider]/[action]/route.ts` | Replace `===` with `safeEqual()` (LOW ×4) |
+
+---
+
+## [2.0.18] — 2026-03-09
+
+> ### 🐛 Bug Fixes — Cursor Decompression, Codex Token Refresh, Password Setup
+
+### 🐛 Bug Fixes
+
+- **#250 — Cursor OAuth tool calls fail (decompression error)** — Frames flagged as `GZIP_ALT (0x02)` or `GZIP_BOTH (0x03)` may use zlib deflate format instead of gzip. `decompressPayload()` previously only tried `gunzipSync`, failing silently and returning raw bytes that downstream protobuf parsing rejected. Fix adds cascaded fallbacks: `gunzipSync` → `inflateSync` → `inflateRawSync`, with verbose error logging when all methods fail.
+
+- **#251 — Codex OAuth accounts fail after v2.0.16 upgrade** — `CodexExecutor` was inheriting `BaseExecutor.refreshCredentials()` which always returns `null`. When a Codex access token expires after a server upgrade/restart, `chatCore.ts` calls `executor.refreshCredentials()` on every 401 response — which returned `null` for Codex, blocking token renewal entirely. Fix: `CodexExecutor` now overrides `refreshCredentials()` to call the existing `refreshCodexToken()` from `tokenRefresh.ts`, restoring automatic recovery.
+
+- **#256 — Configure Password button broken after skipping onboarding** — `isAuthRequired()` in `apiAuth.ts` had a `setupComplete` guard: once `setupComplete=true`, it always required auth. But when the password step is skipped, `setupComplete=true` and `password=null`, making the dashboard inaccessible without a valid JWT (which doesn't exist because no password was ever set). Fix: removed the `setupComplete` check — auth is now skipped whenever no password is configured at all, allowing users to navigate to Settings → Security to set a first password.
+
+### 📁 Files Changed
+
+| File                           | Change                                                               |
+| ------------------------------ | -------------------------------------------------------------------- |
+| `open-sse/executors/cursor.ts` | Add `inflateSync`/`inflateRawSync` fallback in `decompressPayload()` |
+| `open-sse/executors/codex.ts`  | Override `refreshCredentials()` to call `refreshCodexToken()`        |
+| `src/shared/utils/apiAuth.ts`  | Remove `setupComplete` guard from `isAuthRequired()`                 |
+
+---
+
+## [2.0.17] — 2026-03-09
+
+> ### 🐛 Bug Fixes + 🔌 Integrations
+
+### 🐛 Bug Fixes
+
+- **Antigravity/Gemini streaming broken in Claude Code** — Fixed `gemini-to-claude.ts` response translator that was emitting `content_block_start` + `content_block_stop` on **every single streaming chunk**. Claude Code interpreted each block as a separate element, rendering each text delta on its own line. Fix: `openTextBlockIdx` state variable keeps the text block open across chunks and only closes it when the block type changes or at `finishReason`. Fixes #253.
+
+### 🔌 New Integrations
+
+- **OpenCode native integration** — Agents dashboard now shows a **"Download opencode.json"** button when `opencode` is detected as installed. Clicking it fetches all available models from `/v1/models`, auto-fills `baseURL` from your current OmniRoute instance, and downloads a ready-to-use `opencode.json` config file. Inspired by @Alph4d0g's plugin (discussion #162).
+
+### 🔧 CI Improvements
+
+- **Electron macOS Intel CI fixed** — Updated CI runner from deprecated `macos-13` to `macos-15-intel` (GitHub's new Intel x64 runner, GA since April 2025). Fixes all macOS Intel build failures.
+- **Electron binary version sync** — Added step to sync `electron/package.json` version before build so binaries are named correctly (`OmniRoute-2.0.17.dmg` instead of `OmniRoute-2.0.13.dmg`).
+- **Release asset deduplication** — Removed duplicate `*-arm64.dmg` pattern from release files; added `fail_on_unmatched_files: false` for optional `.blockmap` files.
+
+---
+
+## [2.0.16] — 2026-03-08
+
+> ### 🐛 Bug Fixes + 🔧 CI Hardening
+
+### 🐛 Bug Fixes
+
+- **NanoBanana async image polling** — Fixed `data: []` results from `/v1/images/generations` for NanoBanana. The previous implementation treated the submit response as a final image payload. NanoBanana APIs return a `taskId` requiring status polling — the handler now submits, extracts `taskId`, polls `/record-info` until `successFlag=1`, and normalizes to OpenAI format. Added `aspectRatio`/`resolution` inference from `size`. Backward compatible. PR #247 by @hijak
+
+### 🔧 CI Fixes
+
+- **Electron build token missing** — `electron-builder`'s GitHub publish provider requires `GH_TOKEN` to be set, but the build step didn't have it in its `env`. The workflow was failing with `GitHub Personal Access Token is not set` on all 4 platforms. **Fixed**: added `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` to the `Build Electron for...` step (`.github/workflows/electron-release.yml`)
+
+- **Security test `inputSanitizer.js` import** — `tests/unit/security-fase01.test.mjs` imported `inputSanitizer.js` (non-existent) instead of `inputSanitizer.ts`, causing `ERR_MODULE_NOT_FOUND` in CI. Fixed extension.
+
+- **Route validation lint (t06)** — `POST /api/acp/agents` used `request.json()` without `validateBody()`, failing `check:route-validation:t06`. Added `validateBody(jsonObjectSchema)` — all 139 routes now pass.
+
+- **Deploy to VPS SSH failure** — Added `continue-on-error: true` and `command_timeout: 5m` to the SSH step so that connection failures (when VPS is unreachable) don't mark the workflow as failed.
+
+### 📁 Files Changed
+
+| File                                              | Change                                                   |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| `open-sse/config/imageRegistry.ts`                | Added NanoBanana `statusUrl`, extended `supportedSizes`  |
+| `open-sse/handlers/imageGeneration.ts`            | NanoBanana async submit/poll flow + sync backward compat |
+| `tests/unit/nanobanana-image-handler.test.mjs`    | **NEW** — unit tests                                     |
+| `tests/unit/nanobanana-image-generation.test.mjs` | **NEW** — unit tests                                     |
+| `.github/workflows/electron-release.yml`          | Add `GH_TOKEN` to build step (critical fix)              |
+| `tests/unit/security-fase01.test.mjs`             | Fix `inputSanitizer.js` → `.ts`                          |
+| `src/app/api/acp/agents/route.ts`                 | Add `validateBody(jsonObjectSchema)` to POST             |
+| `.github/workflows/deploy-vps.yml`                | `continue-on-error: true` + `command_timeout: 5m`        |
+
+---
+
+## [2.0.15] — 2026-03-08
+
+> ### ✨ New Features + 🐛 Bug Fix
+
+### ✨ New Features
+
+- **Codex Effort Clamp** — `CodexExecutor` now caps `reasoning_effort` to each model's maximum. Added `MAX_EFFORT_BY_MODEL` table and `clampEffort()` — silently clamps with debug log. Unknown models default to `xhigh` (unrestricted). PR #246
+
+- **OpenRouter Catalog Cache** — New `src/lib/catalog/openrouterCatalog.ts`: persistent JSON cache at `DATA_DIR/cache/openrouter-catalog.json`, TTL 24h (`OPENROUTER_CATALOG_TTL_MS`), stale-if-error fallback. New endpoint `GET /api/models/openrouter-catalog` (authenticated, `?refresh=true` forces refresh). PR #246
+
+- **Quota Preflight — opt-in toggle per provider** — New `open-sse/services/quotaPreflight.ts`. Proactively checks quota before requests, enabling account switching before 429s. Toggle via `providerSpecificData.quotaPreflightEnabled` (default: `false`). Extensible via `registerQuotaFetcher()`. Graceful degradation. PR #246
+
+- **Quota Session Monitor — opt-in toggle per provider** — New `open-sse/services/quotaMonitor.ts`. Adaptive polling: 60s normal → 15s critical. Alert deduplication per session (5min window). Toggle via `providerSpecificData.quotaMonitorEnabled` (default: `false`). `timer.unref()` for clean exit. PR #246
+
+### 🛠️ Improvements
+
+- **Provider API supports `providerSpecificData` partial patch** — `PUT /api/providers/[id]` merges `providerSpecificData` (preserves existing keys). Validation schema updated. PR #246
+
+### 🐛 Bug Fixes
+
+- **#244 — Gemini rejects schemas with `"optional"` field** — Added `"optional"` to `UNSUPPORTED_SCHEMA_CONSTRAINTS` in `geminiHelper.ts`. Gemini API returns `400: Cannot find field: optional` when tool schemas include this field. PR #245
+
+### 📦 Desktop Binaries (Electron)
+
+Auto-generated on tag push via `electron-release.yml`:
+
+| Platform            | Download                                           |
+| ------------------- | -------------------------------------------------- |
+| Windows             | `OmniRoute-Setup.exe` + `OmniRoute.exe` (portable) |
+| macOS Intel         | `OmniRoute.dmg`                                    |
+| macOS Apple Silicon | `OmniRoute-arm64.dmg`                              |
+| Linux               | `OmniRoute.AppImage`                               |
+
+### 📁 Files Changed
+
+| File                                             | Change                     |
+| ------------------------------------------------ | -------------------------- |
+| `open-sse/executors/codex.ts`                    | Effort clamp logic         |
+| `open-sse/services/quotaPreflight.ts`            | **NEW**                    |
+| `open-sse/services/quotaMonitor.ts`              | **NEW**                    |
+| `src/lib/catalog/openrouterCatalog.ts`           | **NEW**                    |
+| `src/app/api/models/openrouter-catalog/route.ts` | **NEW**                    |
+| `src/app/api/providers/[id]/route.ts`            | providerSpecificData merge |
+| `src/shared/validation/schemas.ts`               | Schema update              |
+| `open-sse/translator/helpers/geminiHelper.ts`    | Fix #244                   |
+
+---
+
+## [2.0.14] — 2026-03-08
+
+> ### 🐛 Bug Fixes + Electron Release Fix
+
+### 🐛 Bug Fixes
+
+- **#243 — OpenAI-Compatible model name stripping** — Fixed `model.split("/").pop()` stripping vendor namespace from model names with slashes. Models like `moonshotai/Kimi-K2-Instruct` were being truncated to just `Kimi-K2-Instruct`. Now uses `slice(1).join("/")` to preserve the full vendor/model path
+- **#242 — Multimodal image_url rejection on Responses API** — Fixed `image_url` content parts from Chat Completions format being passed through without conversion to `input_image` format expected by Responses/Codex backends. Now properly converts `{type: "image_url", image_url: {url: "..."}}` → `{type: "input_image", image_url: "..."}`
+
+### 🔧 Infrastructure
+
+- **PR #241 — Electron release workflow** — Synced `electron/package.json` version to `2.0.13`, separated macOS x64 and arm64 into dedicated CI runner jobs, using `macos-13` (Intel) runner for x64 builds to prevent cross-compilation timeouts (thanks @benzntech)
+
+### 📁 Files Changed
+
+| File                                              | Change                                                   |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| `open-sse/executors/default.ts`                   | Fix model name stripping: `pop()` → `slice(1).join("/")` |
+| `open-sse/translator/request/openai-responses.ts` | Convert `image_url` → `input_image` for Responses API    |
+| `.github/workflows/electron-release.yml`          | Separate mac x64/arm64 builds                            |
+| `electron/package.json`                           | Version sync + arch-specific build scripts               |
+
+---
+
+## [2.0.11] — 2026-03-07
+
+> ### 🤖 ACP Agents Dashboard + Anti-Ban Docs
+
+### ✨ New Features
+
+- **ACP Agents Dashboard** — New Debug > Agents page: grid of 14 built-in CLI agents (codex, claude, goose, gemini, openclaw, aider, opencode, cline, qwen-code, forge, amazon-q, interpreter, cursor-cli, warp) with installation status, version detection, protocol badges, and custom agent form
+- **Custom Agent Support** — Users can register any CLI tool for auto-detection via dashboard form (name, binary, version command, spawn args). Stored in settings DB
+- **60-Second Detection Cache** — Agent detection results cached to avoid repeated `execSync` calls
+
+### 🐛 Bug Fixes
+
+- **Fix `settings.themeCoral` untranslated** — Theme color "Coral" was missing from the `settings` i18n namespace in all 30 languages. Added translations for all
+
+### 📝 Documentation
+
+- **Anti-Ban Features Clarified** — Improved README descriptions for TLS Fingerprint Spoofing and CLI Fingerprint Matching, emphasizing ban-risk reduction benefits and proxy IP preservation
+- **ACP Agents Dashboard** — Added to v2.0.9+ features table and deployment features table in README
+
+### 📁 Files Changed
+
+| File                                            | Change                                                           |
+| ----------------------------------------------- | ---------------------------------------------------------------- |
+| `src/lib/acp/registry.ts`                       | Expanded from 5 to 14 agents + custom agent support + 60s cache  |
+| `src/app/api/acp/agents/route.ts`               | GET/POST/DELETE for full agent management                        |
+| `src/app/(dashboard)/dashboard/agents/page.tsx` | New dashboard page                                               |
+| `src/shared/components/Sidebar.tsx`             | Added Agents to Debug section                                    |
+| `src/shared/validation/settingsSchemas.ts`      | Added `customAgents` array field                                 |
+| `src/i18n/messages/*.json` (×30)                | Fixed `themeCoral`, added sidebar `agents` key, agents namespace |
+
+---
+
+## [2.0.9] — 2026-03-07
+
+> ### 🚀 Feature Drop — Playground, CLI Fingerprints, ACP
+
+### ✨ New Features
+
+- **#234 — Model Playground** — Dashboard page to test any model directly (provider/model/endpoint selectors, Monaco Editor, streaming, abort, timing metrics). Available in the Debug sidebar section.
+- **#223 — CLI Fingerprint Matching** — Per-provider header/body field ordering to match native CLI binary fingerprints, reducing account flagging risk. Enable via `CLI_COMPAT_<PROVIDER>=1` or `CLI_COMPAT_ALL=1` env vars.
+- **#235 — ACP Support** — Agent Client Protocol module with CLI agent discovery (Codex, Claude, Goose, Gemini CLI, OpenClaw), process spawner/manager, and `/api/acp/agents` endpoint.
+
+### 🧹 Housekeeping
+
+- **#192 & #200** — Closed as stale (needs-info, v1.8.1, no reproduction info provided)
+
+---
+
+## [2.0.8] — 2026-03-07
+
+> ### 🐛 Bug Fix — Custom Image Model Handler Resolution
+
+### 🐛 Bug Fixes
+
+- **#238 — Custom image models still fail in handler layer** — v2.0.7 fixed the route-layer validation, but the handler (`handleImageGeneration()`) called `parseImageModel()` again internally, rejecting custom models a second time. Fix: handler now accepts an optional `resolvedProvider` parameter; when provided, it skips re-validation and routes custom models to the OpenAI-compatible handler with a synthetic config. PR #239
+
+### 📁 Files Changed
+
+| File                                         | Change                                                                           |
+| -------------------------------------------- | -------------------------------------------------------------------------------- |
+| `open-sse/handlers/imageGeneration.ts`       | Added `resolvedProvider` param + custom model fallback                           |
+| `src/app/api/v1/images/generations/route.ts` | Tracks `isCustomModel`, passes `resolvedProvider`, credentials for custom models |
+
+---
+
+## [2.0.7] — 2026-03-07
+
+> ### 🐛 Bug Fixes — Custom Image Models + Codex OAuth Workspace Isolation
+
+### 🐛 Bug Fixes
+
+- **#232 — Custom Gemini image models fail on `/v1/images/generations`** — Custom models tagged with `supportedEndpoints: ["images"]` appeared in the model listing (GET) but were rejected by the POST handler. `parseImageModel()` only checked the built-in `IMAGE_PROVIDERS` registry. Fix: added a custom model DB fallback for models with the `images` endpoint tag. PR #237
+- **#236 — Codex OAuth overwrites existing connection when same email added to another workspace** — The OAuth callback route had 3 upsert blocks matching connections by email-only, bypassing the workspace-aware logic in `createProviderConnection()`. When the same email authenticated to a new workspace, the existing connection's `workspaceId` was silently overwritten. Fix: for Codex, the match now also checks `providerSpecificData.workspaceId`, allowing separate connections per workspace. PR #237
+
+### 📁 Files Changed
+
+| File                                             | Change                                               |
+| ------------------------------------------------ | ---------------------------------------------------- |
+| `src/app/api/v1/images/generations/route.ts`     | Custom model DB fallback in POST handler             |
+| `src/app/api/oauth/[provider]/[action]/route.ts` | Workspace-aware Codex matching in 3 upsert locations |
+
+### ⏭️ Issues Triaged
+
+- **#234** — Playground feature request — Acknowledged, added to roadmap
+- **#235** — ACP support feature request — Acknowledged, added to roadmap
+
+---
+
+## [2.0.6] — 2026-03-07
+
+> ### 🐛 Bug Fix — Custom Model API Format Routing
+
+### 🐛 Bug Fixes
+
+- **#204 — Custom model `apiFormat` not used in routing** — Custom models configured with `apiFormat: "responses"` in the dashboard were still being routed through the Chat Completions translator. The `apiFormat` field was stored in the DB and displayed in the UI, but never consumed by the routing layer. Fix: `getModelInfo()` now returns `apiFormat` from the custom model DB, and both `resolveModelOrError()` functions override `targetFormat` to `openai-responses` when set. PR #233
+
+### ✅ Issues Closed
+
+- **#205** — Combo endpoint support — Already implemented in v2.0.2
+- **#206** — Manual model→endpoint mapping — Already implemented in v2.0.2
+- **#223** — CLI fingerprint parity — Responded with 4-phase roadmap
+
+### 📁 Files Changed
+
+| File                              | Change                                                                 |
+| --------------------------------- | ---------------------------------------------------------------------- |
+| `src/sse/services/model.ts`       | Added `lookupCustomModelApiFormat()`, enriched `getModelInfo()` return |
+| `src/sse/handlers/chat.ts`        | Override `targetFormat` when `apiFormat === "responses"`               |
+| `src/sse/handlers/chatHelpers.ts` | Same override in duplicate `resolveModelOrError()`                     |
+
+---
+
+## [2.0.5] — 2026-03-06
+
+> ### 🐛 Bug Fix, Electron Auto-Update & Dependency Bumps
+
+### 🐛 Bug Fixes
+
+- **#224 — Chat→Responses translation creates invalid reasoning IDs** — Removed synthetic reasoning item generation in `openaiToOpenAIResponsesRequest()`. The translator was creating reasoning items with IDs like `reasoning_15`, but OpenAI's Responses API requires server-generated `rs_*` IDs, causing `400 Invalid Request` errors from Responses-compatible upstreams. Fix: omit reasoning items entirely during translation
+- **CI: duplicate OmniRoute.exe in release workflow** — Removed redundant explicit `release-assets/OmniRoute.exe` entry that caused `softprops/action-gh-release` to fail with 404 on duplicate upload. PR #222 by @benzntech
+
+### ✨ New Features
+
+- **Electron Auto-Update** — Added auto-update functionality to the desktop app using `electron-updater`. Includes IPC handlers for check/download/install, "Check for Updates" in system tray menu, desktop notification when update is ready, and silent startup check (3s delay). PR #221 by @benzntech
+
+### 📦 Dependencies
+
+- Bump `actions/cache` from 4 to 5 (#225)
+- Bump `actions/download-artifact` from 4 to 8 (#226)
+- Bump `docker/login-action` from 3 to 4 (#227)
+- Bump `actions/upload-artifact` from 4 to 7 (#228)
+- Bump `docker/build-push-action` from 6 to 7 (#229)
+- Bump `express-rate-limit` from 8.2.1 to 8.3.0 (#230)
+
+### 📁 Files Changed
+
+| File                                              | Change                                               |
+| ------------------------------------------------- | ---------------------------------------------------- |
+| `open-sse/translator/request/openai-responses.ts` | Remove synthetic reasoning item generation           |
+| `.github/workflows/electron-release.yml`          | Remove duplicate exe entry, bump GH Actions          |
+| `.github/workflows/docker-publish.yml`            | Bump docker/login-action and build-push-action       |
+| `electron/main.js`                                | Auto-updater setup, IPC handlers, tray menu          |
+| `electron/package.json`                           | Added electron-updater dep and GitHub publish config |
+| `electron/preload.js`                             | Exposed update APIs via contextBridge                |
+| `package-lock.json`                               | Updated express-rate-limit                           |
+
+---
+
+## [2.0.4] — 2026-03-06
+
+> ### 🐛 Bug Fixes — Round-Robin Persistence & Docker Compatibility
+
+### 🐛 Bug Fixes
+
+- **#218 — Round-robin sticks to one account** — Added `last_used_at` column to `provider_connections` schema. Round-robin routing relied on `lastUsedAt` to rotate between accounts, but the column was missing from the database — the value was always `null`, causing selection to fall back to the same account. Includes auto-migration for existing databases
+- **#217 — `Cannot find module 'zod'` in Docker/standalone builds** — Added `zod` to `serverExternalPackages` in `next.config.mjs`. Next.js standalone builds weren't tracing `zod` through dynamic imports, causing crashes on Docker startup. Data is **not lost** — the crash prevented the server from reading the existing database
+
+### 📁 Files Changed
+
+| File                      | Change                                                 |
+| ------------------------- | ------------------------------------------------------ |
+| `src/lib/db/core.ts`      | Schema + migration + JSON migration for `last_used_at` |
+| `src/lib/db/providers.ts` | INSERT + UPDATE SQL for `last_used_at`                 |
+| `next.config.mjs`         | `serverExternalPackages: ['better-sqlite3', 'zod']`    |
+
+---
+
+## [2.0.3] — 2026-03-05
+
+> ### 🐛 Bug Fixes & Quota System Hardening
+
+### 🐛 Bug Fixes
+
+- **#215 — Deferred tools 400 error** — Skip `cache_control` on tools with `defer_loading=true` when assigning prompt caching to the last tool. Previously, the API rejected requests with 400 when MCP tools (Playwright, etc.) had deferred loading enabled. Fix applied in both `claudeHelper.ts` and `openai-to-claude.ts` translation layers. PR #216 by @DavyMassoneto
+- **Stale compiled schemas.js** — Deleted stale compiled `schemas.js` (912 lines) that shadowed the TypeScript `.ts` source, causing `cloudSyncActionSchema` warnings in the dashboard. PR #216 by @DavyMassoneto
+- **#202 — False quota exhaustion** — Fixed empty API responses (`{}`) creating quota objects with `utilization ?? 0` = 0% remaining, incorrectly marking accounts as exhausted. Added `hasUtilization()` guard. PR #214 by @DavyMassoneto
+- **Invalid date crash** — `parseDate()` now validates dates before comparison, handling `Invalid Date` from malformed `resetAt` values gracefully. PR #214 by @DavyMassoneto
+- **`total=0` false infinite quota** — `normalizeQuotas` now defaults to 0% remaining when `total` is zero (was incorrectly reporting 100%). PR #214 by @DavyMassoneto
+- **Tailwind v4 build failure** — Tailwind v4 scanned `*.sqlite-shm`/`.sqlite-wal` binary files, triggering "Invalid code point" errors. Added `@source not` exclusions in `globals.css`. PR #214 by @DavyMassoneto
+
+### ✨ Improvements
+
+- **Quota-aware account selection** — All load-balancing strategies (sticky, round-robin, p2c, random, least-used, cost-optimized, fill-first) now prioritize accounts with available quota over exhausted ones. PR #214 by @DavyMassoneto
+- **Concurrent refresh protection** — `tickRunning` flag prevents overlapping background quota refresh ticks; `refreshingSet` deduplicates per-connection refreshes. Thundering herd prevention with `MAX_CONCURRENT_REFRESHES=5`. PR #214 by @DavyMassoneto
+- **`clearModelUnavailability` on success** — Model unavailability is now cleared on every successful request, not only on fallback paths. PR #214 by @DavyMassoneto
+- **Centralized `anthropic-version`** — Hardcoded `anthropic-version` header (3 occurrences) centralized into `CLAUDE_CONFIG.apiVersion`. PR #214 by @DavyMassoneto
+- **Extracted `safePercentage()` utility** — Shared percentage validation function extracted to `src/shared/utils/formatting.ts`, eliminating duplication between backend and frontend. PR #214 by @DavyMassoneto
+- **`isRecord()` type guard** — Replaces inline `typeof` chain in usage API route. PR #214 by @DavyMassoneto
+
+### 📁 Files Changed
+
+| File                                                                                  | Change                                                     |
+| ------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `open-sse/translator/helpers/claudeHelper.ts`                                         | Skip `cache_control` on deferred tools                     |
+| `open-sse/translator/request/openai-to-claude.ts`                                     | Same fix in translator layer                               |
+| `src/shared/validation/schemas.js`                                                    | **DELETED** — stale compiled JS                            |
+| `.gitignore`                                                                          | Exclude Tailwind binary scanning                           |
+| `open-sse/services/usage.ts`                                                          | Legacy endpoint fallback logging                           |
+| `src/domain/quotaCache.ts`                                                            | **NEW** — Core quota cache with hardening                  |
+| `src/shared/utils/formatting.ts`                                                      | **NEW** — `safePercentage()` utility                       |
+| `src/instrumentation.ts`                                                              | Startup log for quota cache                                |
+| `src/sse/handlers/chat.ts`                                                            | `clearModelUnavailability` + `markAccountExhaustedFrom429` |
+| `src/sse/services/auth.ts`                                                            | Quota-aware account selection                              |
+| `src/app/globals.css`                                                                 | Tailwind `@source not` exclusions                          |
+| `src/app/api/usage/[connectionId]/route.ts`                                           | `isRecord()` type guard                                    |
+| `src/app/(dashboard)/dashboard/usage/components/ProviderLimits/ProviderLimitCard.tsx` | Use `remainingPercentage` directly                         |
+| `src/app/(dashboard)/dashboard/usage/components/ProviderLimits/utils.tsx`             | Use shared `safePercentage()`                              |
 
 ---
 
