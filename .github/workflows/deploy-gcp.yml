@@ -102,7 +102,7 @@ jobs:
 
           echo "=== Waiting for health check ==="
           for i in $(seq 1 12); do
-            if curl -sf http://localhost:20128/api/settings > /dev/null 2>&1; then
+            if curl -sf http://localhost:80/api/settings > /dev/null 2>&1; then
               echo "Health check passed on attempt $i"
               docker ps --filter name=omniroute --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
               exit 0
