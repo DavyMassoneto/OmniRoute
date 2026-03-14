@@ -1,0 +1,121 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches: [deploy]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-gcp
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy to GCP VM
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (amd64 only)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: runner-base
+          platforms: linux/amd64
+          load: true
+          tags: omniroute:fork-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export and compress image
+        run: |
+          echo "=== Exporting image ==="
+          docker save omniroute:fork-latest | gzip -1 > /tmp/omniroute-fork.tar.gz
+          SIZE=$(du -sh /tmp/omniroute-fork.tar.gz | cut -f1)
+          echo "Compressed image size: $SIZE"
+
+          echo "=== Splitting into chunks ==="
+          split -b 40M /tmp/omniroute-fork.tar.gz /tmp/omniroute-chunk-
+          rm -f /tmp/omniroute-fork.tar.gz
+          ls -lh /tmp/omniroute-chunk-*
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.GCP_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Clean remote before transfer
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} \
+            'rm -f /tmp/omniroute-chunk-* /tmp/omniroute-fork.tar.gz'
+
+      - name: Transfer chunks to VM
+        run: |
+          for chunk in /tmp/omniroute-chunk-*; do
+            name=$(basename "$chunk")
+            echo "Uploading $name ($(du -sh "$chunk" | cut -f1))..."
+            scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+              "$chunk" ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }}:/tmp/"$name"
+          done
+          echo "=== All chunks transferred ==="
+
+      - name: Deploy on VM
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} << 'DEPLOY_SCRIPT'
+          set -e
+
+          echo "=== Reassembling image ==="
+          cat /tmp/omniroute-chunk-* > /tmp/omniroute-fork.tar.gz
+          rm -f /tmp/omniroute-chunk-*
+
+          echo "=== Loading image ==="
+          gunzip -c /tmp/omniroute-fork.tar.gz | docker load
+          rm -f /tmp/omniroute-fork.tar.gz
+
+          echo "=== Stopping old container ==="
+          docker stop omniroute 2>/dev/null || true
+          docker rm omniroute 2>/dev/null || true
+
+          echo "=== Cleaning old images ==="
+          docker image prune -f
+
+          echo "=== Starting new container ==="
+          docker run -d \
+            --name omniroute \
+            --restart unless-stopped \
+            -p 80:20128 \
+            -v omniroute-data:/app/data \
+            -e PORT=20128 \
+            -e NEXT_PUBLIC_BASE_URL=http://34.135.237.49 \
+            -e INITIAL_PASSWORD=123456 \
+            omniroute:fork-latest
+
+          echo "=== Waiting for health check ==="
+          for i in $(seq 1 12); do
+            if curl -sf http://localhost:20128/api/settings > /dev/null 2>&1; then
+              echo "Health check passed on attempt $i"
+              docker ps --filter name=omniroute --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+              exit 0
+            fi
+            echo "Attempt $i/12 - waiting 5s..."
+            sleep 5
+          done
+
+          echo "Health check failed after 60s"
+          docker logs omniroute --tail 30
+          exit 1
+          DEPLOY_SCRIPT
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
