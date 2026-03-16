@@ -70,8 +70,9 @@ jobs:
 
       - name: Deploy on VM
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ssh -T -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
             ${{ secrets.GCP_USER }}@${{ secrets.GCP_HOST }} << 'DEPLOY_SCRIPT'
+          export TERM=dumb
           set -e
 
           echo "=== Reassembling image ==="
