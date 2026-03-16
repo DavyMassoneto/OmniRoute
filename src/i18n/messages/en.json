@@ -63,6 +63,7 @@
     "dashboard": "Dashboard",
     "providers": "Providers",
     "combos": "Combos",
+    "autoCombo": "Auto Combo",
     "usage": "Usage",
     "analytics": "Analytics",
     "costs": "Costs",
@@ -235,6 +236,26 @@
     "keyCreatedNote": "Copy and store this key now — it won't be shown again.",
     "done": "Done",
     "savePermissions": "Save Permissions",
+    "autoResolve": "Auto-Resolve",
+    "autoResolveDesc": "Auto-resolve ambiguous model names to native provider for this API key.",
+    "keyActive": "Key Active",
+    "keyActiveDesc": "Enable or disable this API key. Disabled keys are immediately rejected with 403.",
+    "accessSchedule": "Access Schedule",
+    "accessScheduleDesc": "Restrict access to specific hours and days of the week.",
+    "scheduleFrom": "From",
+    "scheduleUntil": "Until",
+    "scheduleDays": "Days",
+    "scheduleTimezone": "Timezone",
+    "scheduleTimezoneHint": "Use IANA timezone names, e.g. America/New_York, Europe/Berlin",
+    "scheduleActive": "Schedule",
+    "disabled": "Disabled",
+    "daySun": "Sun",
+    "dayMon": "Mon",
+    "dayTue": "Tue",
+    "dayWed": "Wed",
+    "dayThu": "Thu",
+    "dayFri": "Fri",
+    "daySat": "Sat",
     "allowAll": "Allow All",
     "restrict": "Restrict",
     "allowAllInfo": "This key can access all available models.",
@@ -460,7 +481,9 @@
       "cline": "Cline AI Coding Assistant CLI",
       "kilo": "Kilo Code AI Assistant CLI",
       "cursor": "Cursor AI Code Editor",
-      "continue": "Continue AI Assistant"
+      "continue": "Continue AI Assistant",
+      "opencode": "OpenCode AI coding agent (Terminal)",
+      "kiro": "Amazon Kiro — AI-powered IDE"
     },
     "guides": {
       "cursor": {
@@ -507,6 +530,42 @@
           "4": {
             "title": "Add Model Config",
             "desc": "Add the following configuration to your models array:"
+          }
+        }
+      },
+      "opencode": {
+        "steps": {
+          "1": {
+            "title": "Install OpenCode",
+            "desc": "Install via npm: npm install -g opencode-ai"
+          },
+          "2": {
+            "title": "API Key"
+          },
+          "3": {
+            "title": "Set Base URL",
+            "desc": "opencode config set baseUrl {{baseUrl}}"
+          },
+          "4": {
+            "title": "Select Model"
+          }
+        }
+      },
+      "kiro": {
+        "steps": {
+          "1": {
+            "title": "Open Kiro Settings",
+            "desc": "Go to Settings → AI Provider"
+          },
+          "2": {
+            "title": "Base URL",
+            "desc": "Paste your OmniRoute endpoint URL"
+          },
+          "3": {
+            "title": "API Key"
+          },
+          "4": {
+            "title": "Select Model"
           }
         }
       }
@@ -566,6 +625,8 @@
     "randomDesc": "Uniform random selection, then fallback to remaining models",
     "leastUsedDesc": "Picks the model with fewest requests, balancing load over time",
     "costOptimizedDesc": "Routes to the cheapest model first based on pricing",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each model once before reshuffling",
     "models": "Models",
     "autoBalance": "Auto-balance",
     "advancedSettings": "Advanced Settings",
@@ -708,7 +769,9 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       }
-    }
+    },
+    "templateFreeStack": "Free Stack ($0)",
+    "templateFreeStackDesc": "Round-robin across all free providers: Kiro (Claude), iFlow (5 models), Qwen (4 models), Gemini CLI. Zero cost, never stops coding."
   },
   "costs": {
     "title": "Costs",
@@ -820,7 +883,9 @@
     "a2aQuickStartTitle": "A2A Quick Start",
     "a2aQuickStartStep1": "Discover the agent card at `/.well-known/agent.json`.",
     "a2aQuickStartStep2": "Send JSON-RPC requests to `POST /a2a` using `message/send` or `message/stream`.",
-    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`."
+    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`.",
+    "completionsLegacy": "Completions (Legacy)",
+    "completionsLegacyDesc": "Legacy OpenAI text completions — accepts both prompt string and messages array format"
   },
   "endpoints": {
     "tabProxy": "Endpoint Proxy",
@@ -1184,6 +1249,7 @@
     "clearing": "Clearing...",
     "until": "Until {time}",
     "providerTestFailed": "Provider test failed",
+    "providerTestTimeout": "Provider test timed out — too many connections to test at once",
     "modeTest": "{mode} Test",
     "passedCount": "{count} passed",
     "failedCount": "{count} failed",
@@ -1348,13 +1414,17 @@
     "email": "Email",
     "healthCheckMinutes": "Health Check (min)",
     "healthCheckHint": "Proactive token refresh interval. 0 = disabled.",
+    "groupLabel": "Environment",
+    "groupPlaceholder": "e.g. eKaizen, Personal",
     "failedTestConnection": "Failed to test connection",
     "failed": "Failed",
     "leaveBlankKeepCurrentApiKey": "Leave blank to keep the current API key.",
     "editCompatibleTitle": "Edit {type} Compatible",
     "compatibleBaseUrlHint": "Use the base URL (ending in /v1) for your {type}-compatible API.",
     "apiKeyForCheck": "API Key (for Check)",
-    "compatibleProdPlaceholder": "{type} Compatible (Prod)"
+    "compatibleProdPlaceholder": "{type} Compatible (Prod)",
+    "tokenRefreshed": "Token refreshed successfully",
+    "tokenRefreshFailed": "Token refresh failed"
   },
   "settings": {
     "title": "Settings",
@@ -1517,6 +1587,8 @@
     "leastUsedDesc": "Pick least recently used account",
     "costOpt": "Cost Opt",
     "costOptDesc": "Prefer cheapest available account",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each account once before reshuffling",
     "stickyLimit": "Sticky Limit",
     "stickyLimitDesc": "Calls per account before switching",
     "modelAliases": "Model Aliases",
@@ -2041,6 +2113,9 @@
     "rawPlanWithValue": "Raw plan: {plan}",
     "noPlanFromProvider": "No plan from provider",
     "noQuotaData": "No quota data",
+    "ungrouped": "Ungrouped",
+    "viewFlat": "Flat",
+    "viewByEnvironment": "By Environment",
     "noQuotaDataAvailable": "No quota data available",
     "noAccountsForTierFilter": "No accounts found for tier filter",
     "tierAll": "All",
@@ -2445,5 +2520,28 @@
     "versionCommand": "Version Command",
     "spawnArgs": "Spawn Args",
     "addAgent": "Add Agent"
+  },
+  "autoCombo": {
+    "title": "Auto-Combo Engine",
+    "statusNormal": "Normal",
+    "statusIncident": "Incident Mode",
+    "modePack": "Mode Pack",
+    "providerScores": "Provider Scores",
+    "noAutoCombo": "No auto-combo configured.",
+    "excludedProviders": "Excluded Providers",
+    "noExclusions": "No providers currently excluded.",
+    "factorQuota": "Quota",
+    "factorHealth": "Health",
+    "factorCost": "Cost",
+    "factorLatency": "Latency",
+    "factorTaskFit": "Task Fit",
+    "factorStability": "Stability",
+    "factorTierPriority": "Tier Priority",
+    "factorTierPriorityDesc": "Prefers accounts with higher quota tiers (Ultra/Pro over Free)",
+    "scoreFactorBreakdown": "Scoring Factors",
+    "modePackShipFast": "Ship Fast",
+    "modePackCostSaver": "Cost Saver",
+    "modePackQualityFirst": "Quality First",
+    "modePackOfflineFriendly": "Offline Friendly"
   }
 }

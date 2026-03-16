@@ -32,6 +32,14 @@ interface QuotaCacheEntry {
   fetchedAt: number;
   exhausted: boolean;
   nextResetAt: string | null;
+  windowDurationMs?: number | null; // T08: optional rolling window duration
+}
+
+interface QuotaWindowStatus {
+  remainingPercentage: number;
+  usedPercentage: number;
+  resetAt: string | null;
+  reachedThreshold: boolean;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -56,9 +64,41 @@ function isExhausted(quotas: Record<string, QuotaInfo>): boolean {
   return entries.every((q) => q.remainingPercentage <= 0);
 }
 
+/**
+ * T08 — Auto-advance quota window.
+ * If we know the window duration, advance past the expired window(s) to
+ * avoid blocking requests when the quota reset already happened but the
+ * background refresh hasn't run yet.
+ */
+function advancedWindowResetAt(entry: QuotaCacheEntry, now: number): { exhausted: false } | null {
+  if (!entry.nextResetAt) return null;
+
+  const resetMs = parseDate(entry.nextResetAt);
+  if (resetMs === null) return null;
+
+  // If the window's resetAt is in the past, the quota has been renewed.
+  // Eagerly mark as available so requests don't wait for the 5-min TTL.
+  if (resetMs <= now) {
+    return { exhausted: false };
+  }
+
+  // If we know the window duration, check if the *next* window also passed.
+  if (entry.windowDurationMs && entry.windowDurationMs > 0) {
+    const elapsed = now - resetMs;
+    if (elapsed >= 0) return { exhausted: false };
+  }
+
+  return null;
+}
+
 function parseDate(value: string): number | null {
   const ms = new Date(value).getTime();
   return Number.isNaN(ms) ? null : ms;
+}
+
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
 }
 
 function earliestResetAt(quotas: Record<string, QuotaInfo>): string | null {
@@ -128,17 +168,62 @@ export function isAccountQuotaExhausted(connectionId: string): boolean {
   if (!entry) return false;
   if (!entry.exhausted) return false;
 
-  // If resetAt has passed, assume available until refresh confirms
-  if (entry.nextResetAt) {
-    const resetMs = parseDate(entry.nextResetAt);
-    if (resetMs !== null && resetMs <= Date.now()) return false;
+  const now = Date.now();
+
+  // T08 — Auto window advance: if resetAt is in the past, eagerly treat as not exhausted.
+  // This prevents stale exhaustion blocking when background refresh hasn't run yet.
+  const advanced = advancedWindowResetAt(entry, now);
+  if (advanced) {
+    // Optimistically clear the exhausted flag so we unblock requests immediately.
+    // The next background refresh will update with the real quota state.
+    entry.exhausted = false;
+    return false;
   }
 
   // Exhausted entries without resetAt expire after fixed TTL
-  const age = Date.now() - entry.fetchedAt;
+  const age = now - entry.fetchedAt;
   if (!entry.nextResetAt && age > EXHAUSTED_TTL_MS) return false;
 
   return true;
+}
+
+/**
+ * Return quota window status for a connection (e.g., session/weekly).
+ * Returns null when no cache or no window data is available.
+ */
+export function getQuotaWindowStatus(
+  connectionId: string,
+  windowName: string,
+  thresholdPercent = 90
+): QuotaWindowStatus | null {
+  const entry = cache.get(connectionId);
+  if (!entry) return null;
+
+  const now = Date.now();
+
+  const window = entry.quotas[windowName];
+  if (!window) return null;
+
+  const remainingPercentage = clampPercent(window.remainingPercentage);
+  const usedPercentage = clampPercent(100 - remainingPercentage);
+
+  let resetAt = window.resetAt || null;
+  let windowExpired = false;
+  if (resetAt) {
+    const resetMs = parseDate(resetAt);
+    if (resetMs !== null && resetMs <= now) {
+      resetAt = null;
+      windowExpired = true;
+    }
+  }
+
+  return {
+    remainingPercentage,
+    usedPercentage,
+    resetAt,
+    // If reset time has already passed, avoid stale cached percentages blocking selection.
+    reachedThreshold: windowExpired ? false : usedPercentage >= thresholdPercent,
+  };
 }
 
 /**

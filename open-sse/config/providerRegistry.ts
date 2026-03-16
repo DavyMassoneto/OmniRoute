@@ -186,6 +186,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
       tokenUrl: "https://auth.openai.com/oauth/token",
     },
     models: [
+      { id: "gpt-5.4", name: "GPT 5.4" },
       { id: "gpt-5.3-codex", name: "GPT 5.3 Codex" },
       { id: "gpt-5.3-codex-xhigh", name: "GPT 5.3 Codex (xHigh)" },
       { id: "gpt-5.3-codex-high", name: "GPT 5.3 Codex (High)" },
@@ -212,8 +213,20 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     authType: "oauth",
     authHeader: "bearer",
     headers: {
-      "User-Agent": "google-api-nodejs-client/9.15.1",
-      "X-Goog-Api-Client": "gl-node/22.17.0",
+      "User-Agent": "QwenCode/0.12.3 (linux; x64)",
+      "X-Dashscope-AuthType": "qwen-oauth",
+      "X-Dashscope-CacheControl": "enable",
+      "X-Dashscope-UserAgent": "QwenCode/0.12.3 (linux; x64)",
+      "X-Stainless-Arch": "x64",
+      "X-Stainless-Lang": "js",
+      "X-Stainless-Os": "Linux",
+      "X-Stainless-Package-Version": "5.11.0",
+      "X-Stainless-Retry-Count": "1",
+      "X-Stainless-Runtime": "node",
+      "X-Stainless-Runtime-Version": "v18.19.1",
+      Connection: "keep-alive",
+      "Accept-Language": "*",
+      "Sec-Fetch-Mode": "cors",
     },
     oauth: {
       clientIdEnv: "QWEN_OAUTH_CLIENT_ID",
@@ -225,6 +238,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
       { id: "qwen3-coder-plus", name: "Qwen3 Coder Plus" },
       { id: "qwen3-coder-flash", name: "Qwen3 Coder Flash" },
       { id: "vision-model", name: "Qwen3 Vision Model" },
+      { id: "coder-model", name: "Qwen3.5 (Coder Model)" },
     ],
   },
 
@@ -248,15 +262,20 @@ export const REGISTRY: Record<string, RegistryEntry> = {
       authUrl: "https://iflow.cn/oauth",
     },
     models: [
+      { id: "iflow-rome-30ba3b", name: "iFlow ROME" },
       { id: "qwen3-coder-plus", name: "Qwen3 Coder Plus" },
+      { id: "qwen3-max", name: "Qwen3 Max" },
+      { id: "qwen3-vl-plus", name: "Qwen3 Vision Plus" },
+      { id: "kimi-k2-0905", name: "Kimi K2 0905" },
+      { id: "qwen3-max-preview", name: "Qwen3 Max Preview" },
       { id: "kimi-k2", name: "Kimi K2" },
-      { id: "kimi-k2-thinking", name: "Kimi K2 Thinking" },
-      { id: "kimi-k2.5", name: "Kimi K2.5" },
+      { id: "deepseek-v3.2", name: "DeepSeek-V3.2-Exp" },
       { id: "deepseek-r1", name: "DeepSeek R1" },
-      { id: "deepseek-v3.2-chat", name: "DeepSeek V3.2 Chat" },
-      { id: "deepseek-v3.2-reasoner", name: "DeepSeek V3.2 Reasoner" },
-      { id: "minimax-m2.1", name: "MiniMax M2.1" },
-      { id: "glm-4.7", name: "GLM 4.7" },
+      { id: "deepseek-v3", name: "DeepSeek V3" },
+      { id: "qwen3-32b", name: "Qwen3 32B" },
+      { id: "qwen3-235b-a22b-thinking-2507", name: "Qwen3 235B A22B Thinking 2507" },
+      { id: "qwen3-235b-a22b-instruct", name: "Qwen3 235B A22B Instruct" },
+      { id: "qwen3-235b", name: "Qwen3 235B" },
     ],
   },
 
@@ -486,6 +505,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
       { id: "kimi-k2.5", name: "Kimi K2.5" },
       { id: "kimi-k2.5-thinking", name: "Kimi K2.5 Thinking" },
       { id: "kimi-latest", name: "Kimi Latest" },
+      { id: "kimi-for-coding", name: "Kimi For Coding" },
     ],
   },
 
@@ -875,6 +895,55 @@ export const REGISTRY: Record<string, RegistryEntry> = {
       { id: "Qwen/Qwen2.5-72B-Instruct", name: "Qwen 2.5 72B" },
       { id: "Qwen/Qwen2.5-Coder-32B-Instruct", name: "Qwen 2.5 Coder 32B" },
       { id: "NousResearch/Hermes-3-Llama-3.1-70B", name: "Hermes 3 70B" },
+    ],
+  },
+
+  huggingface: {
+    id: "huggingface",
+    alias: "hf",
+    format: "openai",
+    executor: "default",
+    // HuggingFace Inference API — OpenAI-compatible endpoint
+    // Users must set their provider-specific baseUrl (model endpoint) in providerSpecificData.baseUrl
+    // or use a fixed model like: https://router.huggingface.co/ngc/nvidia/llama-3_1-nemotron-51b-instruct
+    baseUrl:
+      "https://router.huggingface.co/hf-inference/models/meta-llama/Meta-Llama-3.1-70B-Instruct/v1/chat/completions",
+    authType: "apikey",
+    authHeader: "bearer",
+    models: [
+      { id: "meta-llama/Meta-Llama-3.1-70B-Instruct", name: "Llama 3.1 70B Instruct" },
+      { id: "meta-llama/Meta-Llama-3.1-8B-Instruct", name: "Llama 3.1 8B Instruct" },
+      { id: "Qwen/Qwen2.5-72B-Instruct", name: "Qwen 2.5 72B" },
+      { id: "mistralai/Mistral-7B-Instruct-v0.3", name: "Mistral 7B v0.3" },
+      { id: "microsoft/Phi-3.5-mini-instruct", name: "Phi-3.5 Mini" },
+    ],
+  },
+
+  vertex: {
+    id: "vertex",
+    alias: "vertex",
+    // Vertex AI uses Google's generateContent format (same as Gemini)
+    format: "gemini",
+    executor: "default",
+    // URL uses {project_id} and {region} from providerSpecificData — handled by custom executor or fallback
+    // Default to us-central1 / generic endpoint; users configure project via providerSpecificData
+    baseUrl: "https://us-central1-aiplatform.googleapis.com/v1/projects",
+    urlBuilder: (base, model, stream) => {
+      // Full URL: {base}/{project}/locations/{region}/publishers/google/models/{model}:{action}
+      // For a generic fallback, we build a Gemini-compatible URL
+      // The actual project/region are configured via providerSpecificData in the DB connection
+      const action = stream ? "streamGenerateContent?alt=sse" : "generateContent";
+      return `https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}`;
+    },
+    authType: "apikey",
+    authHeader: "bearer",
+    models: [
+      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro (Vertex)" },
+      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Vertex)" },
+      { id: "gemini-2.0-flash-thinking-exp", name: "Gemini 2.0 Flash Thinking Exp (Vertex)" },
+      { id: "gemma-2-27b-it", name: "Gemma 2 27B (Vertex)" },
+      { id: "claude-opus-4-5@20251101", name: "Claude Opus 4.5 (Vertex)" },
+      { id: "claude-sonnet-4-5@20251101", name: "Claude Sonnet 4.5 (Vertex)" },
     ],
   },
 };

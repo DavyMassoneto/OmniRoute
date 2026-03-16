@@ -6,6 +6,20 @@ import { refreshCodexToken } from "../services/tokenRefresh.ts";
 // Ordered list of effort levels from lowest to highest
 const EFFORT_ORDER = ["none", "low", "medium", "high", "xhigh"] as const;
 type EffortLevel = (typeof EFFORT_ORDER)[number];
+const CODEX_FAST_WIRE_VALUE = "priority";
+let defaultFastServiceTierEnabled = false;
+
+function normalizeServiceTierValue(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (normalized === "fast") return CODEX_FAST_WIRE_VALUE;
+  return normalized;
+}
+
+export function setDefaultFastServiceTierEnabled(enabled: boolean): void {
+  defaultFastServiceTierEnabled = enabled;
+}
 
 /**
  * Maximum reasoning effort allowed per Codex model.
@@ -92,8 +106,22 @@ export class CodexExecutor extends BaseExecutor {
    * Transform request before sending - inject default instructions if missing
    */
   transformRequest(model, body, stream, credentials) {
+    const nativeCodexPassthrough = body?._nativeCodexPassthrough === true;
+
     // Codex /responses rejects stream=false; we aggregate SSE back to JSON when needed.
     body.stream = true;
+    delete body._nativeCodexPassthrough;
+
+    const requestServiceTier = normalizeServiceTierValue(body.service_tier);
+    if (requestServiceTier) {
+      body.service_tier = requestServiceTier;
+    } else if (defaultFastServiceTierEnabled) {
+      body.service_tier = CODEX_FAST_WIRE_VALUE;
+    }
+
+    if (nativeCodexPassthrough) {
+      return body;
+    }
 
     // If no instructions provided, inject default Codex instructions
     if (!body.instructions || body.instructions.trim() === "") {

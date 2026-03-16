@@ -189,23 +189,43 @@ export default function ProvidersPage() {
     if (testingMode) return;
     setTestingMode(mode === "provider" ? providerId : mode);
     setTestResults(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90_000); // 90s max
     try {
       const res = await fetch("/api/providers/test-batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode, providerId }),
+        signal: controller.signal,
       });
-      const data = await res.json();
-      setTestResults(data);
-      if (data.summary) {
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        // Response body is not valid JSON (e.g. truncated due to timeout)
+        data = { error: t("providerTestFailed"), results: [], summary: null };
+      }
+      setTestResults({
+        ...data,
+        // Normalize error: if API returns an error object { message, details }, extract the string
+        error: data.error
+          ? typeof data.error === "object"
+            ? data.error.message || data.error.error || JSON.stringify(data.error)
+            : String(data.error)
+          : null,
+      });
+      if (data?.summary) {
         const { passed, failed, total } = data.summary;
         if (failed === 0) notify.success(t("allTestsPassed", { total }));
         else notify.warning(t("testSummary", { passed, failed, total }));
       }
-    } catch (error) {
-      setTestResults({ error: t("providerTestFailed") });
-      notify.error(t("providerTestFailed"));
+    } catch (error: any) {
+      const isAbort = error?.name === "AbortError";
+      const msg = isAbort ? t("providerTestTimeout") : t("providerTestFailed");
+      setTestResults({ error: msg, results: [], summary: null });
+      notify.error(msg);
     } finally {
+      clearTimeout(timeoutId);
       setTestingMode(null);
     }
   };
@@ -470,7 +490,16 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
   const t = useTranslations("providers");
   const tc = useTranslations("common");
   const { connected, error, errorCode, errorTime, allDisabled } = stats;
+  const [imgSrc, setImgSrc] = useState(`/providers/${provider.id}.png`);
   const [imgError, setImgError] = useState(false);
+
+  const handleImgError = () => {
+    if (imgSrc.endsWith(".png")) {
+      setImgSrc(`/providers/${provider.id}.svg`);
+    } else {
+      setImgError(true);
+    }
+  };
 
   const dotColors = {
     free: "bg-green-500",
@@ -503,13 +532,13 @@ function ProviderCard({ providerId, provider, stats, authType, onToggle }) {
                 </span>
               ) : (
                 <Image
-                  src={`/providers/${provider.id}.png`}
+                  src={imgSrc}
                   alt={provider.name}
                   width={30}
                   height={30}
                   className="object-contain rounded-lg max-w-[32px] max-h-[32px]"
                   sizes="32px"
-                  onError={() => setImgError(true)}
+                  onError={handleImgError}
                 />
               )}
             </div>
@@ -590,7 +619,6 @@ function ApiKeyProviderCard({ providerId, provider, stats, authType, onToggle })
   const { connected, error, errorCode, errorTime, allDisabled } = stats;
   const isCompatible = providerId.startsWith(OPENAI_COMPATIBLE_PREFIX);
   const isAnthropicCompatible = providerId.startsWith(ANTHROPIC_COMPATIBLE_PREFIX);
-  const [imgError, setImgError] = useState(false);
 
   const dotColors = {
     free: "bg-green-500",
@@ -616,6 +644,18 @@ function ApiKeyProviderCard({ providerId, provider, stats, authType, onToggle })
     return `/providers/${provider.id}.png`;
   };
 
+  const [imgSrc, setImgSrc] = useState<string>(() => getIconPath());
+  const [imgError, setImgError] = useState(false);
+
+  const handleImgError = () => {
+    const basePath = getIconPath();
+    if (imgSrc.endsWith(".png") && !isCompatible && !isAnthropicCompatible) {
+      setImgSrc(`/providers/${provider.id}.svg`);
+    } else {
+      setImgError(true);
+    }
+  };
+
   return (
     <Link href={`/dashboard/providers/${providerId}`} className="group">
       <Card
@@ -634,13 +674,13 @@ function ApiKeyProviderCard({ providerId, provider, stats, authType, onToggle })
                 </span>
               ) : (
                 <Image
-                  src={getIconPath()}
+                  src={imgSrc || getIconPath()}
                   alt={provider.name}
                   width={30}
                   height={30}
                   className="object-contain rounded-lg max-w-[30px] max-h-[30px]"
                   sizes="30px"
-                  onError={() => setImgError(true)}
+                  onError={handleImgError}
                 />
               )}
             </div>
@@ -1041,17 +1081,27 @@ function ProviderTestResultsView({ results }) {
   const t = useTranslations("providers");
   const tc = useTranslations("common");
 
-  if (results.error && !results.results) {
+  // Guard: never crash on malformed/null results (would trigger error boundary)
+  if (!results || typeof results !== "object") {
+    return null;
+  }
+
+  if (results.error && (!results.results || results.results.length === 0)) {
     return (
       <div className="text-center py-6">
         <span className="material-symbols-outlined text-red-500 text-[32px] mb-2 block">error</span>
-        <p className="text-sm text-red-400">{results.error}</p>
+        <p className="text-sm text-red-400">
+          {typeof results.error === "object"
+            ? results.error?.message || JSON.stringify(results.error)
+            : String(results.error)}
+        </p>
       </div>
     );
   }
 
-  const { summary, mode } = results;
-  const items = results.results || [];
+  const summary = results.summary ?? null;
+  const mode = results.mode ?? "";
+  const items = Array.isArray(results.results) ? results.results : [];
 
   const modeLabel =
     {

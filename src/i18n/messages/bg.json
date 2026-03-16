@@ -138,7 +138,11 @@
     "media": "Медия",
     "mediaDescription": "Генериране на изображения, видеоклипове и музика",
     "themes": "Теми",
-    "themesDescription": "Изберете цветова тема за целия панел на таблото"
+    "themesDescription": "Изберете цветова тема за целия панел на таблото",
+    "mcp": "MCP",
+    "mcpDescription": "Model Context Protocol server management and tools",
+    "a2a": "A2A",
+    "a2aDescription": "Agent-to-Agent protocol tasks and observability"
   },
   "home": {
     "quickStart": "Бърз старт",
@@ -456,7 +460,9 @@
       "cline": "Cline AI Coding Assistant CLI",
       "kilo": "Kilo Code AI Assistant CLI",
       "cursor": "Cursor AI Code Editor",
-      "continue": "Продължете AI Assistant"
+      "continue": "Продължете AI Assistant",
+      "opencode": "OpenCode AI coding agent (Terminal)",
+      "kiro": "Amazon Kiro — AI-powered IDE"
     },
     "guides": {
       "cursor": {
@@ -503,6 +509,42 @@
           "4": {
             "title": "Добавяне на конфигурация на модела",
             "desc": "Добавете следната конфигурация към вашия масив от модели:"
+          }
+        }
+      },
+      "opencode": {
+        "steps": {
+          "1": {
+            "title": "Install OpenCode",
+            "desc": "Install via npm: npm install -g opencode-ai"
+          },
+          "2": {
+            "title": "API Key"
+          },
+          "3": {
+            "title": "Set Base URL",
+            "desc": "opencode config set baseUrl {{baseUrl}}"
+          },
+          "4": {
+            "title": "Select Model"
+          }
+        }
+      },
+      "kiro": {
+        "steps": {
+          "1": {
+            "title": "Open Kiro Settings",
+            "desc": "Go to Settings → AI Provider"
+          },
+          "2": {
+            "title": "Base URL",
+            "desc": "Paste your OmniRoute endpoint URL"
+          },
+          "3": {
+            "title": "API Key"
+          },
+          "4": {
+            "title": "Select Model"
           }
         }
       }
@@ -562,6 +604,8 @@
     "randomDesc": "Единен случаен избор, след което се връща към останалите модели",
     "leastUsedDesc": "Избира модела с най-малко заявки, като балансира натоварването във времето",
     "costOptimizedDesc": "Първо маршрути към най-евтиния модел въз основа на ценообразуването",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each model once before reshuffling",
     "models": "Модели",
     "autoBalance": "Автоматичен баланс",
     "advancedSettings": "Разширени настройки",
@@ -704,7 +748,9 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       }
-    }
+    },
+    "templateFreeStack": "Free Stack ($0)",
+    "templateFreeStackDesc": "Round-robin across all free providers: Kiro (Claude), iFlow (5 models), Qwen (4 models), Gemini CLI. Zero cost, never stops coding."
   },
   "costs": {
     "title": "Разходи",
@@ -816,7 +862,9 @@
     "a2aQuickStartTitle": "Button text: start playing a game",
     "a2aQuickStartStep1": "Открийте картата на агента на @@PH0 @@.",
     "a2aQuickStartStep2": "Изпратете JSON - RPC заявки до@@ PH0 @@, като използвате @@ PH1 @@ или @@ PH2 @@.",
-    "a2aQuickStartStep3": "Проследяване и контрол на задачите с помощта на @@ PH0 @@ и @@ PH1 @@."
+    "a2aQuickStartStep3": "Проследяване и контрол на задачите с помощта на @@ PH0 @@ и @@ PH1 @@.",
+    "completionsLegacy": "Completions (Legacy)",
+    "completionsLegacyDesc": "Legacy OpenAI text completions — accepts both prompt string and messages array format"
   },
   "mcpDashboard": {
     "loading": "Зареждане на таблото за управление на MCP...",
@@ -1332,13 +1380,16 @@
     "email": "Имейл",
     "healthCheckMinutes": "Проверка на здравето (мин.)",
     "healthCheckHint": "Интервал за опресняване на проактивен токен. 0 = забранено.",
+    "groupLabel": "Environment",
+    "groupPlaceholder": "e.g. eKaizen, Personal",
     "failedTestConnection": "Неуспешно тестване на връзката",
     "failed": "Неуспешно",
     "leaveBlankKeepCurrentApiKey": "Оставете празно, за да запазите текущия API ключ.",
     "editCompatibleTitle": "Редактиране {type} Съвместим",
     "compatibleBaseUrlHint": "Използвайте основния URL (завършващ на /v1) за вашия {type}-съвместим API.",
     "apiKeyForCheck": "API ключ (за проверка)",
-    "compatibleProdPlaceholder": "{type} Съвместим (Prod)"
+    "compatibleProdPlaceholder": "{type} Съвместим (Prod)",
+    "providerTestTimeout": "Provider test timed out — too many connections to test at once"
   },
   "settings": {
     "title": "Настройки",
@@ -1496,6 +1547,8 @@
     "leastUsedDesc": "Изберете най-малко използван акаунт",
     "costOpt": "Цена Опт",
     "costOptDesc": "Предпочитайте най-евтиния наличен акаунт",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each account once before reshuffling",
     "stickyLimit": "Лепкава граница",
     "stickyLimitDesc": "Обаждания на акаунт преди превключване",
     "modelAliases": "Псевдоними на модела",
@@ -1734,7 +1787,12 @@
     "customPricingNote": "Можете да замените цените по подразбиране за конкретни модели. Персонализираните замени имат приоритет пред автоматично разпознатото ценообразуване.",
     "editPricing": "Редактиране на цените",
     "viewFullDetails": "Вижте пълните подробности",
-    "themeCoral": "Корал"
+    "themeCoral": "Корал",
+    "cliFingerprint": "CLI Fingerprint Matching",
+    "cliFingerprintDesc": "Match native CLI binary signatures when proxying requests. Reorders headers and body fields to look identical to the official CLI tools. Your proxy IP is preserved.",
+    "cliFingerprintEnabled": "{count} provider(s) with CLI fingerprint active",
+    "enableFingerprintTitle": "Enable fingerprint for {provider}",
+    "disableFingerprintTitle": "Disable fingerprint for {provider}"
   },
   "translator": {
     "title": "Преводач",
@@ -2020,6 +2078,9 @@
     "rawPlanWithValue": "Необработен план: {plan}",
     "noPlanFromProvider": "Няма план от доставчика",
     "noQuotaData": "Няма данни за квоти",
+    "ungrouped": "Ungrouped",
+    "viewFlat": "Flat",
+    "viewByEnvironment": "By Environment",
     "noQuotaDataAvailable": "Няма налични данни за квота",
     "noAccountsForTierFilter": "Няма намерени акаунти за филтър за ниво",
     "tierAll": "Всички",
@@ -2419,5 +2480,45 @@
     "featureWebhooks": "Webhook configuration and event subscriptions",
     "featureSwagger": "OpenAPI / Swagger spec auto-generation",
     "featureAuth": "API key and OAuth scope management per endpoint"
+  },
+  "agents": {
+    "title": "CLI Agents",
+    "description": "Discover installed CLI agents on your system. Add custom agents for auto-detection.",
+    "refresh": "Refresh",
+    "installed": "Installed",
+    "notFound": "Not Found",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "remove": "Remove",
+    "addCustomAgent": "Add Custom Agent",
+    "addCustomAgentDesc": "Register any CLI tool for detection. It will be scanned automatically on refresh.",
+    "agentName": "Agent Name",
+    "binaryName": "Binary Name",
+    "versionCommand": "Version Command",
+    "spawnArgs": "Spawn Args",
+    "addAgent": "Add Agent"
+  },
+  "autoCombo": {
+    "title": "Auto-Combo Engine",
+    "statusNormal": "Normal",
+    "statusIncident": "Incident Mode",
+    "modePack": "Mode Pack",
+    "providerScores": "Provider Scores",
+    "noAutoCombo": "No auto-combo configured.",
+    "excludedProviders": "Excluded Providers",
+    "noExclusions": "No providers currently excluded.",
+    "factorQuota": "Quota",
+    "factorHealth": "Health",
+    "factorCost": "Cost",
+    "factorLatency": "Latency",
+    "factorTaskFit": "Task Fit",
+    "factorStability": "Stability",
+    "factorTierPriority": "Tier Priority",
+    "factorTierPriorityDesc": "Prefers accounts with higher quota tiers (Ultra/Pro over Free)",
+    "scoreFactorBreakdown": "Scoring Factors",
+    "modePackShipFast": "Ship Fast",
+    "modePackCostSaver": "Cost Saver",
+    "modePackQualityFirst": "Quality First",
+    "modePackOfflineFriendly": "Offline Friendly"
   }
 }

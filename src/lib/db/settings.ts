@@ -5,6 +5,7 @@
 import { getDbInstance } from "./core";
 import { backupDbFile } from "./backup";
 import { PROVIDER_ID_TO_ALIAS } from "@omniroute/open-sse/config/providerModels.ts";
+import { invalidateDbCache } from "./readCache";
 
 type JsonRecord = Record<string, unknown>;
 type PricingModels = Record<string, JsonRecord>;
@@ -80,6 +81,7 @@ export async function updateSettings(updates: Record<string, unknown>) {
   });
   tx();
   backupDbFile("pre-write");
+  invalidateDbCache("settings"); // Bust the read cache immediately
   return getSettings();
 }
 
@@ -92,6 +94,25 @@ export async function isCloudEnabled() {
 
 export async function getPricing() {
   const db = getDbInstance();
+
+  // Layer 1: Hardcoded defaults (lowest priority)
+  const { getDefaultPricing } = await import("@/shared/constants/pricing");
+  const defaultPricing = getDefaultPricing();
+
+  // Layer 2: Synced external pricing (middle priority)
+  const syncedRows = db
+    .prepare("SELECT key, value FROM key_value WHERE namespace = 'pricing_synced'")
+    .all();
+  const syncedPricing: PricingByProvider = {};
+  for (const row of syncedRows) {
+    const record = toRecord(row);
+    const key = typeof record.key === "string" ? record.key : null;
+    const rawValue = typeof record.value === "string" ? record.value : null;
+    if (!key || rawValue === null) continue;
+    syncedPricing[key] = toRecord(JSON.parse(rawValue)) as PricingModels;
+  }
+
+  // Layer 3: User overrides (highest priority)
   const rows = db.prepare("SELECT key, value FROM key_value WHERE namespace = 'pricing'").all();
   const userPricing: PricingByProvider = {};
   for (const row of rows) {
@@ -102,28 +123,24 @@ export async function getPricing() {
     userPricing[key] = toRecord(JSON.parse(rawValue)) as PricingModels;
   }
 
-  const { getDefaultPricing } = await import("@/shared/constants/pricing");
-  const defaultPricing = getDefaultPricing();
-
+  // Merge: defaults → synced → user (each layer overrides the previous)
   const mergedPricing: PricingByProvider = {};
+
+  // Start with defaults
   for (const [provider, models] of Object.entries(defaultPricing) as Array<[string, unknown]>) {
     mergedPricing[provider] = { ...(toRecord(models) as PricingModels) };
-    if (userPricing[provider]) {
-      for (const [model, pricing] of Object.entries(userPricing[provider])) {
-        mergedPricing[provider][model] = mergedPricing[provider][model]
-          ? { ...(mergedPricing[provider][model] || {}), ...toRecord(pricing) }
-          : pricing;
-      }
-    }
   }
 
-  for (const [provider, models] of Object.entries(userPricing)) {
-    if (!mergedPricing[provider]) {
-      mergedPricing[provider] = { ...models };
-    } else {
-      for (const [model, pricing] of Object.entries(models)) {
-        if (!mergedPricing[provider][model]) {
-          mergedPricing[provider][model] = pricing;
+  // Layer synced then user on top (each higher-priority layer overrides)
+  for (const layer of [syncedPricing, userPricing]) {
+    for (const [provider, models] of Object.entries(layer)) {
+      if (!mergedPricing[provider]) {
+        mergedPricing[provider] = { ...models };
+      } else {
+        for (const [model, pricing] of Object.entries(models)) {
+          mergedPricing[provider][model] = mergedPricing[provider][model]
+            ? { ...(mergedPricing[provider][model] || {}), ...toRecord(pricing) }
+            : pricing;
         }
       }
     }
@@ -169,7 +186,7 @@ export async function updatePricing(pricingData: PricingByProvider) {
   });
   tx();
   backupDbFile("pre-write");
-
+  invalidateDbCache("pricing"); // Bust the pricing read cache
   const updated: PricingByProvider = {};
   const allRows = db.prepare("SELECT key, value FROM key_value WHERE namespace = 'pricing'").all();
   for (const row of allRows) {

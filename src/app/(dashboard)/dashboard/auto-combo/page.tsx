@@ -141,6 +141,7 @@ export default function AutoComboDashboard() {
     latencyInv: "⚡ Latency",
     taskFit: "🎯 Task Fit",
     stability: "📈 Stability",
+    tierPriority: "🏷️ Tier",
   };
 
   const MODE_PACKS = [

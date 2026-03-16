@@ -12,6 +12,7 @@ import { addBufferToUsage, filterUsageForFormat, estimateUsage } from "../utils/
 import { refreshWithRetry } from "../services/tokenRefresh.ts";
 import { createRequestLogger } from "../utils/requestLogger.ts";
 import { getModelTargetFormat, PROVIDER_ID_TO_ALIAS } from "../config/providerModels.ts";
+import { resolveModelAlias } from "../services/modelDeprecation.ts";
 import { createErrorResult, parseUpstreamError, formatProviderError } from "../utils/error.ts";
 import { HTTP_STATUS } from "../config/constants.ts";
 import { handleBypassRequest } from "../utils/bypassHandler.ts";
@@ -39,6 +40,23 @@ import {
 } from "@/lib/semanticCache";
 import { getIdempotencyKey, checkIdempotency, saveIdempotency } from "@/lib/idempotencyLayer";
 import { createProgressTransform, wantsProgress } from "../utils/progressTracker.ts";
+import { isModelUnavailableError, getNextFamilyFallback } from "../services/modelFamilyFallback.ts";
+
+export function shouldUseNativeCodexPassthrough({
+  provider,
+  sourceFormat,
+  endpointPath,
+}: {
+  provider?: string | null;
+  sourceFormat?: string | null;
+  endpointPath?: string | null;
+}): boolean {
+  if (provider !== "codex") return false;
+  if (sourceFormat !== FORMATS.OPENAI_RESPONSES) return false;
+  return String(endpointPath || "")
+    .toLowerCase()
+    .endsWith("/responses");
+}
 
 /**
  * Core chat handler - shared between SSE and Worker
@@ -92,9 +110,20 @@ export async function handleChatCore({
   // Initialize rate limit settings from persisted DB (once, lazy)
   await initializeRateLimits();
 
+  // T07: Inject connectionId into credentials so executors can rotate API keys
+  // using providerSpecificData.extraApiKeys (API Key Round-Robin feature)
+  if (connectionId && credentials && !credentials.connectionId) {
+    credentials.connectionId = connectionId;
+  }
+
   const sourceFormat = detectFormat(body);
   const endpointPath = (clientRawRequest?.endpoint || "").toLowerCase();
   const isResponsesEndpoint = endpointPath.endsWith("/responses");
+  const nativeCodexPassthrough = shouldUseNativeCodexPassthrough({
+    provider,
+    sourceFormat,
+    endpointPath,
+  });
 
   // Check for bypass patterns (warmup, skip) - return fake response
   const bypassResponse = handleBypassRequest(body, model, userAgent);
@@ -105,8 +134,13 @@ export async function handleChatCore({
   // Detect source format and get target format
   // Model-specific targetFormat takes priority over provider default
 
+  // Apply custom model aliases (Settings → Model Aliases → Pattern→Target) before routing (#315)
+  // Custom aliases take priority over built-in and must be resolved here so the
+  // downstream getModelTargetFormat() lookup uses the correct, aliased model ID.
+  const resolvedModel = resolveModelAlias(model);
+
   const alias = PROVIDER_ID_TO_ALIAS[provider] || provider;
-  const modelTargetFormat = getModelTargetFormat(alias, model);
+  const modelTargetFormat = getModelTargetFormat(alias, resolvedModel);
   const targetFormat = modelTargetFormat || getTargetFormat(provider);
 
   // Default to false unless client explicitly sets stream: true (OpenAI spec compliant)
@@ -151,45 +185,62 @@ export async function handleChatCore({
   // Translate request (pass reqLogger for intermediate logging)
   let translatedBody = body;
   try {
-    // Issue #199: Disable tool name prefix when routing Claude-format requests
-    // to non-Claude backends (prefix causes tool name mismatches)
-    const claudeProviders = ["claude", "anthropic"];
-    if (targetFormat === FORMATS.CLAUDE && !claudeProviders.includes(provider?.toLowerCase?.())) {
-      translatedBody = { ...translatedBody, _disableToolPrefix: true };
-    }
+    if (nativeCodexPassthrough) {
+      translatedBody = { ...body, _nativeCodexPassthrough: true };
+      log?.debug?.("FORMAT", "native codex passthrough enabled");
+    } else {
+      translatedBody = { ...body };
 
-    // ── #291: Strip empty name fields from messages/input items ──
-    // Upstream providers (OpenAI, Codex) reject name:"" with 400 errors.
-    // Clients like PocketPaw may forward empty name fields from assistant turns.
-    if (Array.isArray(body.messages)) {
-      body.messages = body.messages.map((msg: Record<string, unknown>) => {
-        if (msg.name === "") {
-          const { name: _n, ...rest } = msg;
-          return rest;
-        }
-        return msg;
-      });
-    }
-    if (Array.isArray(body.input)) {
-      body.input = body.input.map((item: Record<string, unknown>) => {
-        if (item.name === "") {
-          const { name: _n, ...rest } = item;
-          return rest;
-        }
-        return item;
-      });
-    }
+      // Issue #199: Disable tool name prefix when routing Claude-format requests
+      // to non-Claude backends (prefix causes tool name mismatches)
+      const claudeProviders = ["claude", "anthropic"];
+      if (targetFormat === FORMATS.CLAUDE && !claudeProviders.includes(provider?.toLowerCase?.())) {
+        translatedBody._disableToolPrefix = true;
+      }
 
-    translatedBody = translateRequest(
-      sourceFormat,
-      targetFormat,
-      model,
-      translatedBody,
-      stream,
-      credentials,
-      provider,
-      reqLogger
-    );
+      // ── #291: Strip empty name fields from messages/input items ──
+      // Upstream providers (OpenAI, Codex) reject name:"" with 400 errors.
+      // Clients like PocketPaw may forward empty name fields from assistant turns.
+      if (Array.isArray(translatedBody.messages)) {
+        translatedBody.messages = translatedBody.messages.map((msg: Record<string, unknown>) => {
+          if (msg.name === "") {
+            const { name: _n, ...rest } = msg;
+            return rest;
+          }
+          return msg;
+        });
+      }
+      if (Array.isArray(translatedBody.input)) {
+        translatedBody.input = translatedBody.input.map((item: Record<string, unknown>) => {
+          if (item.name === "") {
+            const { name: _n, ...rest } = item;
+            return rest;
+          }
+          return item;
+        });
+      }
+      // ── #346: Strip tools with empty function.name ──
+      // Claude Code sometimes forwards tool definitions with empty names, causing
+      // OpenAI-compatible upstream providers to reject with:
+      // "Invalid 'input[N].name': empty string. Expected minimum length 1."
+      if (Array.isArray(translatedBody.tools)) {
+        translatedBody.tools = translatedBody.tools.filter((tool: Record<string, unknown>) => {
+          const fn = tool.function as Record<string, unknown> | undefined;
+          return fn?.name && String(fn.name).trim().length > 0;
+        });
+      }
+
+      translatedBody = translateRequest(
+        sourceFormat,
+        targetFormat,
+        model,
+        translatedBody,
+        stream,
+        credentials,
+        provider,
+        reqLogger
+      );
+    }
   } catch (error) {
     const parsedStatus = Number(error?.statusCode);
     const statusCode =
@@ -241,6 +292,10 @@ export async function handleChatCore({
 
   // Track pending request
   trackPendingRequest(model, provider, connectionId, true);
+
+  // T5: track which models we've tried for intra-family fallback
+  const triedModels = new Set<string>([model]);
+  let currentModel = model;
 
   // Log start
   appendRequestLog({ model, provider, connectionId, status: "PENDING" }).catch(() => {});
@@ -415,7 +470,53 @@ export async function handleChatCore({
     // Update rate limiter from error response headers
     updateFromHeaders(provider, connectionId, providerResponse.headers, statusCode, model);
 
-    return createErrorResult(statusCode, errMsg, retryAfterMs);
+    // ── T5: Intra-family model fallback ──────────────────────────────────────
+    // Before returning a model-unavailable error upstream, try sibling models
+    // from the same family. This keeps the request alive on the same account
+    // instead of failing the entire combo.
+    if (isModelUnavailableError(statusCode, message)) {
+      const nextModel = getNextFamilyFallback(currentModel, triedModels);
+      if (nextModel) {
+        triedModels.add(nextModel);
+        currentModel = nextModel;
+        translatedBody.model = nextModel;
+        log?.info?.("MODEL_FALLBACK", `${model} unavailable (${statusCode}) → trying ${nextModel}`);
+        // Re-execute with the fallback model
+        try {
+          const fallbackResult = await withRateLimit(provider, connectionId, nextModel, () =>
+            executor.execute({
+              model: nextModel,
+              body: translatedBody,
+              stream,
+              credentials,
+              signal: streamController.signal,
+              log,
+              extendedContext,
+            })
+          );
+          if (fallbackResult.response.ok) {
+            providerResponse = fallbackResult.response;
+            providerUrl = fallbackResult.url;
+            providerHeaders = fallbackResult.headers;
+            finalBody = fallbackResult.transformedBody;
+            // Continue processing with the fallback response — skip error return
+            log?.info?.("MODEL_FALLBACK", `Serving ${nextModel} as fallback for ${model}`);
+            // Jump to streaming/non-streaming handling below
+            // We fall through by NOT returning here
+          } else {
+            // Fallback also failed — return original error
+            return createErrorResult(statusCode, errMsg, retryAfterMs);
+          }
+        } catch {
+          return createErrorResult(statusCode, errMsg, retryAfterMs);
+        }
+      } else {
+        return createErrorResult(statusCode, errMsg, retryAfterMs);
+      }
+    } else {
+      return createErrorResult(statusCode, errMsg, retryAfterMs);
+    }
+    // ── End T5 ───────────────────────────────────────────────────────────────
   }
 
   // Non-streaming response

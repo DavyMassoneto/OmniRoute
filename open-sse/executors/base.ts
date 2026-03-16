@@ -1,5 +1,6 @@
 import { HTTP_STATUS, FETCH_TIMEOUT_MS } from "../config/constants.ts";
 import { applyFingerprint, isCliCompatEnabled } from "../config/cliFingerprints.ts";
+import { getRotatingApiKey } from "../services/apiKeyRotator.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -23,6 +24,7 @@ export type ProviderCredentials = {
   refreshToken?: string;
   apiKey?: string;
   expiresAt?: string;
+  connectionId?: string; // T07: used for API key rotation index
   providerSpecificData?: JsonRecord;
 };
 
@@ -131,7 +133,14 @@ export class BaseExecutor {
     if (credentials.accessToken) {
       headers["Authorization"] = `Bearer ${credentials.accessToken}`;
     } else if (credentials.apiKey) {
-      headers["Authorization"] = `Bearer ${credentials.apiKey}`;
+      // T07: rotate between primary + extra API keys when extraApiKeys is configured
+      const extraKeys =
+        (credentials.providerSpecificData?.extraApiKeys as string[] | undefined) ?? [];
+      const effectiveKey =
+        extraKeys.length > 0 && credentials.connectionId
+          ? getRotatingApiKey(credentials.connectionId, credentials.apiKey, extraKeys)
+          : credentials.apiKey;
+      headers["Authorization"] = `Bearer ${effectiveKey}`;
     }
 
     if (stream) {
@@ -158,6 +167,9 @@ export class BaseExecutor {
     return status === HTTP_STATUS.RATE_LIMITED && urlIndex + 1 < this.getFallbackCount();
   }
 
+  // Intra-URL retry config: retry same URL before falling back to next node
+  static readonly RETRY_CONFIG = { maxAttempts: 2, delayMs: 2000 };
+
   // Override in subclass for provider-specific refresh
   async refreshCredentials(credentials: ProviderCredentials, log: ExecutorLog | null) {
     void credentials;
@@ -179,18 +191,32 @@ export class BaseExecutor {
     const fallbackCount = this.getFallbackCount();
     let lastError: unknown = null;
     let lastStatus = 0;
+    // Track per-URL intra-retry attempts to avoid infinite loops
+    const retryAttemptsByUrl: Record<number, number> = {};
 
     for (let urlIndex = 0; urlIndex < fallbackCount; urlIndex++) {
       const url = this.buildUrl(model, stream, urlIndex, credentials);
       const headers = this.buildHeaders(credentials, stream);
 
       // Append 1M context beta header when [1m] suffix was used
+      // Only supported for specific Claude models per Anthropic docs
       if (extendedContext) {
-        const existing = headers["Anthropic-Beta"];
-        if (existing) {
-          headers["Anthropic-Beta"] = existing + ",context-1m-2025-08-07";
-        } else {
-          headers["Anthropic-Beta"] = "context-1m-2025-08-07";
+        const EXTENDED_CONTEXT_MODELS = [
+          "claude-opus-4-6",
+          "claude-sonnet-4-6",
+          "claude-sonnet-4-5",
+          "claude-sonnet-4",
+        ];
+        const baseModel = model.replace(/-\d{8}$/, "");
+        if (
+          EXTENDED_CONTEXT_MODELS.some((m) => baseModel === m || model === m || model.startsWith(m))
+        ) {
+          const existing = headers["Anthropic-Beta"];
+          if (existing) {
+            headers["Anthropic-Beta"] = existing + ",context-1m-2025-08-07";
+          } else {
+            headers["Anthropic-Beta"] = "context-1m-2025-08-07";
+          }
         }
       }
 
@@ -223,6 +249,22 @@ export class BaseExecutor {
         if (combinedSignal) fetchOptions.signal = combinedSignal;
 
         const response = await fetch(url, fetchOptions);
+
+        // Intra-URL retry: if 429 and we haven't exhausted per-URL retries, wait and retry the same URL
+        if (
+          response.status === HTTP_STATUS.RATE_LIMITED &&
+          (retryAttemptsByUrl[urlIndex] ?? 0) < BaseExecutor.RETRY_CONFIG.maxAttempts
+        ) {
+          retryAttemptsByUrl[urlIndex] = (retryAttemptsByUrl[urlIndex] ?? 0) + 1;
+          const attempt = retryAttemptsByUrl[urlIndex];
+          log?.debug?.(
+            "RETRY",
+            `429 intra-retry ${attempt}/${BaseExecutor.RETRY_CONFIG.maxAttempts} on ${url} — waiting ${BaseExecutor.RETRY_CONFIG.delayMs}ms`
+          );
+          await new Promise((resolve) => setTimeout(resolve, BaseExecutor.RETRY_CONFIG.delayMs));
+          urlIndex--; // re-run this urlIndex on the next loop iteration
+          continue;
+        }
 
         if (this.shouldRetry(response.status, urlIndex)) {
           log?.debug?.("RETRY", `${response.status} on ${url}, trying fallback ${urlIndex + 1}`);

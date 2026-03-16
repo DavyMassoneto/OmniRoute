@@ -23,8 +23,12 @@ export function clearCachedPassword() {
   _cachedPassword = null;
 }
 
-// server.js is in same directory as this file
 const PID_FILE = path.join(resolveDataDir(), "mitm", ".mitm.pid");
+const MITM_SERVER_URL = new URL("./server.cjs", import.meta.url);
+const MITM_SERVER_PATH =
+  process.platform === "win32" && MITM_SERVER_URL.pathname.startsWith("/")
+    ? decodeURIComponent(MITM_SERVER_URL.pathname.slice(1))
+    : decodeURIComponent(MITM_SERVER_URL.pathname);
 
 // Check if a PID is alive
 function isProcessAlive(pid) {
@@ -104,8 +108,7 @@ export async function startMitm(apiKey, sudoPassword) {
 
   // 4. Start MITM server
   console.log("Starting MITM server...");
-  const serverPath = path.join(process.cwd(), "src/mitm/server.js");
-  serverProcess = spawn("node", [serverPath], {
+  serverProcess = spawn(process.execPath, [MITM_SERVER_PATH], {
     env: {
       ...process.env,
       ROUTER_API_KEY: apiKey,

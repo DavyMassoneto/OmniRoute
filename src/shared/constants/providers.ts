@@ -144,6 +144,8 @@ export const APIKEY_PROVIDERS = {
     color: "#F55036",
     textIcon: "GQ",
     website: "https://groq.com",
+    hasFree: true,
+    freeNote: "Free tier: 30 RPM / 14.4K RPD — no credit card",
   },
   blackbox: {
     id: "blackbox",
@@ -206,7 +208,9 @@ export const APIKEY_PROVIDERS = {
     icon: "memory",
     color: "#FF4F00",
     textIcon: "CB",
-    website: "https://www.cerebras.ai",
+    website: "https://inference.cerebras.ai",
+    hasFree: true,
+    freeNote: "Free: 1M tokens/day, 60K TPM — world's fastest inference",
   },
   cohere: {
     id: "cohere",
@@ -224,7 +228,9 @@ export const APIKEY_PROVIDERS = {
     icon: "developer_board",
     color: "#76B900",
     textIcon: "NV",
-    website: "https://developer.nvidia.com/nim",
+    website: "https://build.nvidia.com",
+    hasFree: true,
+    freeNote: "Free dev access: ~40 RPM, 70+ models (Kimi K2.5, GLM 4.7, DeepSeek V3.2...)",
   },
   nebius: {
     id: "nebius",
@@ -342,6 +348,27 @@ export const APIKEY_PROVIDERS = {
     color: "#4CAF50",
     textIcon: "CF",
     website: "https://github.com/comfyanonymous/ComfyUI",
+  },
+  huggingface: {
+    id: "huggingface",
+    alias: "hf",
+    name: "HuggingFace",
+    icon: "face",
+    color: "#FFD21E",
+    textIcon: "HF",
+    website: "https://huggingface.co",
+    hasFree: true,
+    freeNote: "Free Inference API for thousands of models (Whisper, VITS, SDXL…)",
+  },
+  vertex: {
+    id: "vertex",
+    alias: "vertex",
+    name: "Vertex AI",
+    icon: "cloud",
+    color: "#4285F4",
+    textIcon: "VA",
+    website: "https://cloud.google.com/vertex-ai",
+    authHint: "Provide Service Account JSON or OAuth access_token",
   },
 };
 

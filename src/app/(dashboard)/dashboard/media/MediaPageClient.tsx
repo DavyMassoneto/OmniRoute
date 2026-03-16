@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 type Modality = "image" | "video" | "music" | "speech" | "transcription";
 type GenerationResult = {
@@ -20,6 +21,7 @@ const MODALITY_CONFIG: Record<
     placeholder?: string;
     color: string;
     textLabel?: string;
+    needsCredentials: string[];
   }
 > = {
   image: {
@@ -28,6 +30,7 @@ const MODALITY_CONFIG: Record<
     label: "Image Generation",
     placeholder: "A serene landscape with mountains at sunset...",
     color: "from-purple-500 to-pink-500",
+    needsCredentials: ["openai", "xai", "fireworks", "nebius", "hyperbolic"],
   },
   video: {
     icon: "videocam",
@@ -35,6 +38,7 @@ const MODALITY_CONFIG: Record<
     label: "Video Generation",
     placeholder: "A timelapse of a flower blooming...",
     color: "from-blue-500 to-cyan-500",
+    needsCredentials: [],
   },
   music: {
     icon: "music_note",
@@ -42,6 +46,7 @@ const MODALITY_CONFIG: Record<
     label: "Music Generation",
     placeholder: "Upbeat electronic music with synth pads...",
     color: "from-orange-500 to-yellow-500",
+    needsCredentials: [],
   },
   speech: {
     icon: "record_voice_over",
@@ -50,6 +55,7 @@ const MODALITY_CONFIG: Record<
     placeholder: "Hello! Welcome to OmniRoute, your intelligent AI gateway...",
     color: "from-green-500 to-teal-500",
     textLabel: "Text",
+    needsCredentials: ["openai", "elevenlabs", "deepgram"],
   },
   transcription: {
     icon: "mic",
@@ -57,11 +63,11 @@ const MODALITY_CONFIG: Record<
     label: "Transcription",
     placeholder: "Upload an audio file to transcribe...",
     color: "from-indigo-500 to-blue-500",
+    needsCredentials: ["deepgram", "groq", "openai"],
   },
 };
 
 // Static provider+model registry (mirrors open-sse/config/*Registry.ts)
-//  — kept client-side so no API round-trip needed.
 const PROVIDER_MODELS: Record<
   Modality,
   { id: string; name: string; models: { id: string; name: string }[] }[]
@@ -225,35 +231,38 @@ const PROVIDER_MODELS: Record<
   ],
   transcription: [
     {
+      id: "deepgram",
+      name: "Deepgram ($200 free)",
+      models: [
+        { id: "deepgram/nova-3", name: "Nova 3 (Best)" },
+        { id: "deepgram/nova-2", name: "Nova 2" },
+        { id: "deepgram/enhanced", name: "Enhanced" },
+        { id: "deepgram/base", name: "Base" },
+      ],
+    },
+    {
+      id: "assemblyai",
+      name: "AssemblyAI ($50 free)",
+      models: [
+        { id: "assemblyai/universal-3-pro", name: "Universal 3 Pro (Best)" },
+        { id: "assemblyai/universal-2", name: "Universal 2" },
+        { id: "assemblyai/nano", name: "Nano (Fast)" },
+      ],
+    },
+    {
+      id: "groq",
+      name: "Groq (Free — Whisper)",
+      models: [
+        { id: "groq/whisper-large-v3", name: "Whisper Large v3 (Free)" },
+        { id: "groq/whisper-large-v3-turbo", name: "Whisper Turbo (Free)" },
+      ],
+    },
+    {
       id: "openai",
       name: "OpenAI",
       models: [
         { id: "openai/whisper-1", name: "Whisper 1" },
         { id: "openai/gpt-4o-transcription", name: "GPT-4o Transcription" },
-      ],
-    },
-    {
-      id: "groq",
-      name: "Groq",
-      models: [
-        { id: "groq/whisper-large-v3", name: "Whisper Large v3" },
-        { id: "groq/whisper-large-v3-turbo", name: "Whisper Turbo" },
-      ],
-    },
-    {
-      id: "deepgram",
-      name: "Deepgram",
-      models: [
-        { id: "deepgram/nova-3", name: "Nova 3" },
-        { id: "deepgram/nova-2", name: "Nova 2" },
-      ],
-    },
-    {
-      id: "assemblyai",
-      name: "AssemblyAI",
-      models: [
-        { id: "assemblyai/universal-3-pro", name: "Universal 3 Pro" },
-        { id: "assemblyai/universal-2", name: "Universal 2" },
       ],
     },
     {
@@ -315,6 +324,80 @@ function getVoiceList(providerId: string) {
   return VOICE_PRESETS[providerId] ?? VOICE_PRESETS.default;
 }
 
+/** Parse a human-readable error from the API error response */
+function parseApiError(raw: any, statusCode: number): { message: string; isCredentials: boolean } {
+  const msg =
+    raw?.error?.message ||
+    raw?.err_msg ||
+    raw?.error ||
+    raw?.message ||
+    raw?.detail ||
+    (typeof raw === "string" ? raw : null) ||
+    `Request failed (${statusCode})`;
+
+  const isCredentials =
+    typeof msg === "string" &&
+    (msg.toLowerCase().includes("no credentials") ||
+      msg.toLowerCase().includes("invalid api key") ||
+      msg.toLowerCase().includes("unauthorized") ||
+      msg.toLowerCase().includes("authentication") ||
+      msg.toLowerCase().includes("api key") ||
+      statusCode === 401 ||
+      statusCode === 403);
+
+  return { message: String(msg), isCredentials };
+}
+
+/** Render image result thumbnails */
+function ImageResults({ data }: { data: any }) {
+  const images: Array<{ url?: string; b64_json?: string; revised_prompt?: string }> =
+    data?.data || [];
+  if (images.length === 0) {
+    return (
+      <p className="text-sm text-text-muted italic">
+        No images returned. The provider might have accepted the request but returned empty data.
+      </p>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {images.map((img, i) => {
+        const src = img.url || (img.b64_json ? `data:image/png;base64,${img.b64_json}` : null);
+        if (!src) return null;
+        return (
+          <div
+            key={i}
+            className="relative group rounded-lg overflow-hidden border border-black/10 dark:border-white/10"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt={img.revised_prompt || `Generated image ${i + 1}`}
+              className="w-full"
+            />
+            <a
+              href={src}
+              download={`image-${i + 1}.png`}
+              className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[13px]">download</span>
+              Save
+            </a>
+            {img.revised_prompt && (
+              <p
+                className="text-[11px] text-text-muted px-2 py-1 bg-surface/80 truncate"
+                title={img.revised_prompt}
+              >
+                {img.revised_prompt}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function MediaPageClient() {
   const t = useTranslations("media");
   const [activeTab, setActiveTab] = useState<Modality>("image");
@@ -327,6 +410,7 @@ export default function MediaPageClient() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isCredentialsError, setIsCredentialsError] = useState(false);
 
   // Speech-specific
   const [speechVoice, setSpeechVoice] = useState("alloy");
@@ -335,7 +419,46 @@ export default function MediaPageClient() {
   // Transcription-specific
   const [audioFile, setAudioFile] = useState<File | null>(null);
 
-  const currentProviders = PROVIDER_MODELS[activeTab] ?? [];
+  // Fix #390: Track which local providers (sdwebui, comfyui) are actually configured
+  // so we can hide them when they haven't been set up in the providers page
+  const LOCAL_PROVIDERS = ["sdwebui", "comfyui"];
+  const [configuredLocalProviders, setConfiguredLocalProviders] = useState<Set<string>>(
+    new Set(LOCAL_PROVIDERS) // Optimistic: show all until we know otherwise
+  );
+
+  useEffect(() => {
+    // Fetch configured provider connections to determine which local providers are set up
+    fetch("/api/providers")
+      .then((r) => r.json())
+      .then((data) => {
+        const connections: { provider?: string; testStatus?: string }[] = Array.isArray(data)
+          ? data
+          : (data?.connections ?? data?.providers ?? []);
+        const configured = new Set<string>();
+        for (const conn of connections) {
+          const pId = conn?.provider;
+          if (pId && LOCAL_PROVIDERS.includes(pId)) {
+            configured.add(pId);
+          }
+        }
+        // Only update if at least one local provider was found, otherwise keep optimistic
+        if (configured.size > 0) {
+          setConfiguredLocalProviders(configured);
+        } else {
+          // No local providers configured — hide sdwebui/comfyui
+          setConfiguredLocalProviders(new Set());
+        }
+      })
+      .catch(() => {
+        // On error, keep showing all (fail-open)
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Filter out unconfigured local providers from the provider list
+  const currentProviders = (PROVIDER_MODELS[activeTab] ?? []).filter(
+    (p) => !LOCAL_PROVIDERS.includes(p.id) || configuredLocalProviders.has(p.id)
+  );
   const currentModels = currentProviders.find((p) => p.id === selectedProvider)?.models ?? [];
 
   const switchTab = (tab: Modality) => {
@@ -343,6 +466,7 @@ export default function MediaPageClient() {
     setPrompt("");
     setResult(null);
     setError(null);
+    setIsCredentialsError(false);
     setAudioFile(null);
     // Pick first provider and first model automatically
     const providers = PROVIDER_MODELS[tab] ?? [];
@@ -366,9 +490,9 @@ export default function MediaPageClient() {
   };
 
   // Initialize on mount — pick first provider/model for image tab
-  const [initialized, setInitialized] = useState(false);
-  if (!initialized) {
-    setInitialized(true);
+  const initialized = useRef(false);
+  if (!initialized.current) {
+    initialized.current = true;
     const providers = PROVIDER_MODELS["image"] ?? [];
     const firstProvider = providers[0];
     setSelectedProvider(firstProvider?.id ?? "");
@@ -378,6 +502,7 @@ export default function MediaPageClient() {
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
+    setIsCredentialsError(false);
     setResult(null);
 
     try {
@@ -401,8 +526,10 @@ export default function MediaPageClient() {
           }),
         });
         if (!res.ok) {
-          const e = await res.json().catch(() => ({}));
-          throw new Error(e?.error?.message || `TTS failed (${res.status})`);
+          const raw = await res.json().catch(() => ({}));
+          const { message, isCredentials } = parseApiError(raw, res.status);
+          setIsCredentialsError(isCredentials);
+          throw new Error(message);
         }
         const blob = await res.blob();
         const audioUrl = URL.createObjectURL(blob);
@@ -427,10 +554,31 @@ export default function MediaPageClient() {
         form.append("model", modelId);
         const res = await fetch(config.endpoint, { method: "POST", body: form });
         if (!res.ok) {
-          const e = await res.json().catch(() => ({}));
-          throw new Error(e?.error?.message || `Transcription failed (${res.status})`);
+          const raw = await res.json().catch(() => ({}));
+          const { message, isCredentials } = parseApiError(raw, res.status);
+          setIsCredentialsError(isCredentials);
+          throw new Error(message);
         }
         const data = await res.json();
+        // Check for noSpeechDetected flag (music, silence, etc.) — NOT a credential error
+        if (data?.noSpeechDetected) {
+          setError(
+            `No speech detected in the audio file. If you uploaded music or a silent file, try an audio file with spoken words. Provider: "${selectedProvider}".`
+          );
+          setIsCredentialsError(false);
+          setLoading(false);
+          return;
+        }
+        // Warn if text is empty without the noSpeechDetected flag (unexpected)
+        if (data && typeof data.text === "string" && data.text.trim() === "") {
+          setError(
+            `Transcription returned empty text. The audio may contain no recognizable speech, or the "${selectedProvider}" API key may be invalid. Check Dashboard → Logs → Proxy for details.`
+          );
+          // Only mark as credential error if we can confirm it from context
+          setIsCredentialsError(false);
+          setLoading(false);
+          return;
+        }
         setResult({ type: "transcription", data, timestamp: Date.now() });
         setLoading(false);
         return;
@@ -451,8 +599,10 @@ export default function MediaPageClient() {
         }),
       });
       if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e?.error?.message || `Generation failed (${res.status})`);
+        const raw = await res.json().catch(() => ({}));
+        const { message, isCredentials } = parseApiError(raw, res.status);
+        setIsCredentialsError(isCredentials);
+        throw new Error(message);
       }
       const data = await res.json();
       setResult({ type: activeTab, data, timestamp: Date.now() });
@@ -531,6 +681,20 @@ export default function MediaPageClient() {
             </select>
           </div>
         </div>
+
+        {/* Credential hint */}
+        {selectedProvider && !["sdwebui", "comfyui", "qwen"].includes(selectedProvider) && (
+          <p className="text-xs text-text-muted flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[14px] text-amber-500">info</span>
+            Requires <strong className="capitalize">{selectedProvider}</strong> API key in{" "}
+            <Link
+              href="/dashboard/providers"
+              className="text-primary underline underline-offset-2 hover:text-primary/80"
+            >
+              Providers
+            </Link>
+          </p>
+        )}
 
         {/* Speech: voice + format */}
         {activeTab === "speech" && (
@@ -640,11 +804,30 @@ export default function MediaPageClient() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
-          <span className="material-symbols-outlined text-red-500 text-[20px] mt-0.5">error</span>
-          <div>
-            <p className="text-sm font-medium text-red-500">{t("error")}</p>
-            <p className="text-sm text-text-muted mt-1">{error}</p>
+        <div
+          className={`rounded-xl p-4 flex items-start gap-3 ${isCredentialsError ? "bg-amber-500/10 border border-amber-500/20" : "bg-red-500/10 border border-red-500/20"}`}
+        >
+          <span
+            className={`material-symbols-outlined text-[20px] mt-0.5 ${isCredentialsError ? "text-amber-500" : "text-red-500"}`}
+          >
+            {isCredentialsError ? "key" : "error"}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p
+              className={`text-sm font-medium ${isCredentialsError ? "text-amber-500" : "text-red-500"}`}
+            >
+              {isCredentialsError ? "API Key Required" : t("error")}
+            </p>
+            <p className="text-sm text-text-muted mt-1 break-words">{error}</p>
+            {isCredentialsError && (
+              <Link
+                href="/dashboard/providers"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
+              >
+                <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+                Configure API keys in Providers →
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -675,6 +858,26 @@ export default function MediaPageClient() {
                 <span className="material-symbols-outlined text-[16px]">download</span>
                 Download {result.data?.format?.toUpperCase() || "MP3"}
               </a>
+            </div>
+          ) : result.type === "image" ? (
+            <ImageResults data={result.data} />
+          ) : result.type === "transcription" ? (
+            <div className="space-y-3">
+              <div className="bg-surface rounded-lg p-4 text-sm text-text-main leading-relaxed whitespace-pre-wrap">
+                {result.data?.text || (
+                  <span className="text-text-muted italic">No text returned</span>
+                )}
+              </div>
+              {result.data?.words && (
+                <details className="mt-2">
+                  <summary className="text-xs text-text-muted cursor-pointer hover:text-text-main">
+                    Word-level timestamps ({result.data.words.length} words)
+                  </summary>
+                  <pre className="bg-surface rounded mt-2 p-3 text-xs text-text-muted overflow-auto max-h-48 custom-scrollbar">
+                    {JSON.stringify(result.data.words, null, 2)}
+                  </pre>
+                </details>
+              )}
             </div>
           ) : (
             <pre className="bg-surface rounded-lg p-4 text-xs text-text-muted overflow-auto max-h-96 custom-scrollbar">

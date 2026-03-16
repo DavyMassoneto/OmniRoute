@@ -138,7 +138,11 @@
     "media": "Media",
     "mediaDescription": "Generate images, videos, and music",
     "themes": "Themes",
-    "themesDescription": "Choose a color theme for the whole dashboard panel"
+    "themesDescription": "Choose a color theme for the whole dashboard panel",
+    "mcp": "MCP",
+    "mcpDescription": "Model Context Protocol server management and tools",
+    "a2a": "A2A",
+    "a2aDescription": "Agent-to-Agent protocol tasks and observability"
   },
   "home": {
     "quickStart": "Szybki start",
@@ -456,7 +460,9 @@
       "cline": "Cline AI Asystent kodowania CLI",
       "kilo": "Kilo Code AI Assistant CLI",
       "cursor": "Edytor kodu AI kursora",
-      "continue": "Kontynuuj Asystenta AI"
+      "continue": "Kontynuuj Asystenta AI",
+      "opencode": "OpenCode AI coding agent (Terminal)",
+      "kiro": "Amazon Kiro — AI-powered IDE"
     },
     "guides": {
       "cursor": {
@@ -503,6 +509,42 @@
           "4": {
             "title": "Dodaj konfigurację modelu",
             "desc": "Dodaj następującą konfigurację do tablicy modeli:"
+          }
+        }
+      },
+      "opencode": {
+        "steps": {
+          "1": {
+            "title": "Install OpenCode",
+            "desc": "Install via npm: npm install -g opencode-ai"
+          },
+          "2": {
+            "title": "API Key"
+          },
+          "3": {
+            "title": "Set Base URL",
+            "desc": "opencode config set baseUrl {{baseUrl}}"
+          },
+          "4": {
+            "title": "Select Model"
+          }
+        }
+      },
+      "kiro": {
+        "steps": {
+          "1": {
+            "title": "Open Kiro Settings",
+            "desc": "Go to Settings → AI Provider"
+          },
+          "2": {
+            "title": "Base URL",
+            "desc": "Paste your OmniRoute endpoint URL"
+          },
+          "3": {
+            "title": "API Key"
+          },
+          "4": {
+            "title": "Select Model"
           }
         }
       }
@@ -562,6 +604,8 @@
     "randomDesc": "Jednolity wybór losowy, a następnie powrót do pozostałych modeli",
     "leastUsedDesc": "Wybiera model z najmniejszą liczbą żądań, równoważąc obciążenie w czasie",
     "costOptimizedDesc": "Najpierw wybiera najtańszy model na podstawie ceny",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each model once before reshuffling",
     "models": "Modele",
     "autoBalance": "Automatyczne balansowanie",
     "advancedSettings": "Ustawienia zaawansowane",
@@ -704,7 +748,9 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       }
-    }
+    },
+    "templateFreeStack": "Free Stack ($0)",
+    "templateFreeStackDesc": "Round-robin across all free providers: Kiro (Claude), iFlow (5 models), Qwen (4 models), Gemini CLI. Zero cost, never stops coding."
   },
   "costs": {
     "title": "Koszty",
@@ -816,7 +862,9 @@
     "a2aQuickStartTitle": "A2A Quick Start",
     "a2aQuickStartStep1": "Discover the agent card at `/.well-known/agent.json`.",
     "a2aQuickStartStep2": "Send JSON-RPC requests to `POST /a2a` using `message/send` or `message/stream`.",
-    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`."
+    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`.",
+    "completionsLegacy": "Completions (Legacy)",
+    "completionsLegacyDesc": "Legacy OpenAI text completions — accepts both prompt string and messages array format"
   },
   "mcpDashboard": {
     "loading": "Loading MCP dashboard...",
@@ -1332,13 +1380,16 @@
     "email": "E-mail",
     "healthCheckMinutes": "Kontrola stanu (min)",
     "healthCheckHint": "Proaktywny interwał odświeżania tokenu. 0 = wyłączone.",
+    "groupLabel": "Environment",
+    "groupPlaceholder": "e.g. eKaizen, Personal",
     "failedTestConnection": "Nie udało się przetestować połączenia",
     "failed": "Nie udało się",
     "leaveBlankKeepCurrentApiKey": "Pozostaw puste, aby zachować bieżący klucz API.",
     "editCompatibleTitle": "Edytuj {type} Kompatybilny",
     "compatibleBaseUrlHint": "Użyj podstawowego adresu URL (kończącego się na /v1) dla interfejsu API zgodnego z {type}.",
     "apiKeyForCheck": "Klucz API (do sprawdzenia)",
-    "compatibleProdPlaceholder": "{type} Kompatybilny (Prod)"
+    "compatibleProdPlaceholder": "{type} Kompatybilny (Prod)",
+    "providerTestTimeout": "Provider test timed out — too many connections to test at once"
   },
   "settings": {
     "title": "Ustawienia",
@@ -1496,6 +1547,8 @@
     "leastUsedDesc": "Wybierz ostatnio używane konto",
     "costOpt": "Opcja kosztowa",
     "costOptDesc": "Preferuj najtańsze dostępne konto",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each account once before reshuffling",
     "stickyLimit": "Lepki limit",
     "stickyLimitDesc": "Połączenia na konto przed zmianą",
     "modelAliases": "Aliasy modeli",
@@ -1734,7 +1787,12 @@
     "customPricingNote": "Możesz zastąpić domyślne ceny dla określonych modeli. Zastąpienia niestandardowe mają pierwszeństwo przed automatycznie wykrytymi cenami.",
     "editPricing": "Edytuj ceny",
     "viewFullDetails": "Zobacz pełne szczegóły",
-    "themeCoral": "Koral"
+    "themeCoral": "Koral",
+    "cliFingerprint": "CLI Fingerprint Matching",
+    "cliFingerprintDesc": "Match native CLI binary signatures when proxying requests. Reorders headers and body fields to look identical to the official CLI tools. Your proxy IP is preserved.",
+    "cliFingerprintEnabled": "{count} provider(s) with CLI fingerprint active",
+    "enableFingerprintTitle": "Enable fingerprint for {provider}",
+    "disableFingerprintTitle": "Disable fingerprint for {provider}"
   },
   "translator": {
     "title": "Tłumacz",
@@ -2020,6 +2078,9 @@
     "rawPlanWithValue": "Surowy plan: {plan}",
     "noPlanFromProvider": "Brak planu od dostawcy",
     "noQuotaData": "Brak danych dotyczących kwot",
+    "ungrouped": "Ungrouped",
+    "viewFlat": "Flat",
+    "viewByEnvironment": "By Environment",
     "noQuotaDataAvailable": "Brak dostępnych danych dotyczących kwot",
     "noAccountsForTierFilter": "Nie znaleziono kont dla filtra poziomów",
     "tierAll": "Wszystko",
@@ -2419,5 +2480,45 @@
     "featureWebhooks": "Webhook configuration and event subscriptions",
     "featureSwagger": "OpenAPI / Swagger spec auto-generation",
     "featureAuth": "API key and OAuth scope management per endpoint"
+  },
+  "agents": {
+    "title": "CLI Agents",
+    "description": "Discover installed CLI agents on your system. Add custom agents for auto-detection.",
+    "refresh": "Refresh",
+    "installed": "Installed",
+    "notFound": "Not Found",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "remove": "Remove",
+    "addCustomAgent": "Add Custom Agent",
+    "addCustomAgentDesc": "Register any CLI tool for detection. It will be scanned automatically on refresh.",
+    "agentName": "Agent Name",
+    "binaryName": "Binary Name",
+    "versionCommand": "Version Command",
+    "spawnArgs": "Spawn Args",
+    "addAgent": "Add Agent"
+  },
+  "autoCombo": {
+    "title": "Auto-Combo Engine",
+    "statusNormal": "Normal",
+    "statusIncident": "Incident Mode",
+    "modePack": "Mode Pack",
+    "providerScores": "Provider Scores",
+    "noAutoCombo": "No auto-combo configured.",
+    "excludedProviders": "Excluded Providers",
+    "noExclusions": "No providers currently excluded.",
+    "factorQuota": "Quota",
+    "factorHealth": "Health",
+    "factorCost": "Cost",
+    "factorLatency": "Latency",
+    "factorTaskFit": "Task Fit",
+    "factorStability": "Stability",
+    "factorTierPriority": "Tier Priority",
+    "factorTierPriorityDesc": "Prefers accounts with higher quota tiers (Ultra/Pro over Free)",
+    "scoreFactorBreakdown": "Scoring Factors",
+    "modePackShipFast": "Ship Fast",
+    "modePackCostSaver": "Cost Saver",
+    "modePackQualityFirst": "Quality First",
+    "modePackOfflineFriendly": "Offline Friendly"
   }
 }

@@ -161,6 +161,11 @@ async function getGitHubUsage(accessToken, providerSpecificData) {
 
     if (!response.ok) {
       const error = await response.text();
+      if (response.status === 401 || response.status === 403) {
+        return {
+          message: `GitHub token expired or permission denied. Please re-authenticate the connection.`,
+        };
+      }
       throw new Error(`GitHub API error: ${error}`);
     }
 
@@ -488,13 +493,14 @@ async function getClaudeUsage(accessToken) {
       const data = await oauthResponse.json();
       const quotas: Record<string, UsageQuota> = {};
 
-      // utilization = percentage USED (e.g., 92 means 92% used, 8% remaining)
+      // utilization = percentage USED (e.g., 90 means 90% used, 10% remaining)
+      // Confirmed via user report #299: Claude.ai shows 87% used = OmniRoute must show 13% remaining.
       const hasUtilization = (window: JsonRecord) =>
         window && typeof window === "object" && safePercentage(window.utilization) !== undefined;
 
       const createQuotaObject = (window: JsonRecord) => {
-        const used = safePercentage(window.utilization) as number;
-        const remaining = 100 - used;
+        const used = safePercentage(window.utilization) as number; // utilization = % used
+        const remaining = Math.max(0, 100 - used);
         return {
           used,
           total: 100,
@@ -619,6 +625,11 @@ async function getCodexUsage(accessToken, providerSpecificData: Record<string, u
     });
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        return {
+          message: `Codex token expired or access denied. Please re-authenticate the connection.`,
+        };
+      }
       throw new Error(`Codex API error: ${response.status}`);
     }
 
@@ -917,12 +928,12 @@ async function getKimiUsage(accessToken) {
       };
     };
 
-    if (hasUtilization(dataObj.five_hour)) {
-      quotas["session (5h)"] = createQuotaObject(dataObj.five_hour);
+    if (hasUtilization(toRecord(dataObj.five_hour))) {
+      quotas["session (5h)"] = createQuotaObject(toRecord(dataObj.five_hour));
     }
 
-    if (hasUtilization(dataObj.seven_day)) {
-      quotas["weekly (7d)"] = createQuotaObject(dataObj.seven_day);
+    if (hasUtilization(toRecord(dataObj.seven_day))) {
+      quotas["weekly (7d)"] = createQuotaObject(toRecord(dataObj.seven_day));
     }
 
     // Check for model-specific quotas
@@ -935,7 +946,8 @@ async function getKimiUsage(accessToken) {
     }
 
     if (Object.keys(quotas).length > 0) {
-      const membershipLevel = dataObj.user?.membership?.level;
+      const userRecord = toRecord(dataObj.user);
+      const membershipLevel = toRecord(userRecord.membership).level;
       const planName = getKimiPlanName(membershipLevel);
       return {
         plan: planName || "Kimi Coding",
@@ -944,7 +956,8 @@ async function getKimiUsage(accessToken) {
     }
 
     // No quota data in response
-    const membershipLevel = dataObj.user?.membership?.level;
+    const userRecord = toRecord(dataObj.user);
+    const membershipLevel = toRecord(userRecord.membership).level;
     const planName = getKimiPlanName(membershipLevel);
     return {
       plan: planName || "Kimi Coding",

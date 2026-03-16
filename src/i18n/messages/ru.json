@@ -138,7 +138,11 @@
     "media": "Media",
     "mediaDescription": "Generate images, videos, and music",
     "themes": "Темы",
-    "themesDescription": "Выберите цветовую тему для всей панели"
+    "themesDescription": "Выберите цветовую тему для всей панели",
+    "mcp": "MCP",
+    "mcpDescription": "Model Context Protocol server management and tools",
+    "a2a": "A2A",
+    "a2aDescription": "Agent-to-Agent protocol tasks and observability"
   },
   "home": {
     "quickStart": "Быстрый старт",
@@ -456,7 +460,9 @@
       "cline": "Cline AI Coding Assistant CLI",
       "kilo": "Интерфейс командной строки Kilo Code AI Assistant",
       "cursor": "Редактор кода курсора AI",
-      "continue": "Продолжить AI-помощник"
+      "continue": "Продолжить AI-помощник",
+      "opencode": "OpenCode AI coding agent (Terminal)",
+      "kiro": "Amazon Kiro — AI-powered IDE"
     },
     "guides": {
       "cursor": {
@@ -503,6 +509,42 @@
           "4": {
             "title": "Добавить конфигурацию модели",
             "desc": "Добавьте следующую конфигурацию в массив моделей:"
+          }
+        }
+      },
+      "opencode": {
+        "steps": {
+          "1": {
+            "title": "Install OpenCode",
+            "desc": "Install via npm: npm install -g opencode-ai"
+          },
+          "2": {
+            "title": "API Key"
+          },
+          "3": {
+            "title": "Set Base URL",
+            "desc": "opencode config set baseUrl {{baseUrl}}"
+          },
+          "4": {
+            "title": "Select Model"
+          }
+        }
+      },
+      "kiro": {
+        "steps": {
+          "1": {
+            "title": "Open Kiro Settings",
+            "desc": "Go to Settings → AI Provider"
+          },
+          "2": {
+            "title": "Base URL",
+            "desc": "Paste your OmniRoute endpoint URL"
+          },
+          "3": {
+            "title": "API Key"
+          },
+          "4": {
+            "title": "Select Model"
           }
         }
       }
@@ -562,6 +604,8 @@
     "randomDesc": "Равномерный случайный выбор, затем возврат к оставшимся моделям",
     "leastUsedDesc": "Выбирает модель с наименьшим количеством запросов, балансируя нагрузку с течением времени.",
     "costOptimizedDesc": "Маршруты к самой дешевой модели в первую очередь на основе цены",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each model once before reshuffling",
     "models": "Модели",
     "autoBalance": "Автобаланс",
     "advancedSettings": "Расширенные настройки",
@@ -704,7 +748,9 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       }
-    }
+    },
+    "templateFreeStack": "Free Stack ($0)",
+    "templateFreeStackDesc": "Round-robin across all free providers: Kiro (Claude), iFlow (5 models), Qwen (4 models), Gemini CLI. Zero cost, never stops coding."
   },
   "costs": {
     "title": "Затраты",
@@ -816,7 +862,9 @@
     "a2aQuickStartTitle": "A2A Quick Start",
     "a2aQuickStartStep1": "Discover the agent card at `/.well-known/agent.json`.",
     "a2aQuickStartStep2": "Send JSON-RPC requests to `POST /a2a` using `message/send` or `message/stream`.",
-    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`."
+    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`.",
+    "completionsLegacy": "Completions (Legacy)",
+    "completionsLegacyDesc": "Legacy OpenAI text completions — accepts both prompt string and messages array format"
   },
   "mcpDashboard": {
     "loading": "Loading MCP dashboard...",
@@ -1332,13 +1380,16 @@
     "email": "электронная почта",
     "healthCheckMinutes": "Проверка здоровья (мин)",
     "healthCheckHint": "Интервал обновления упреждающего токена. 0 = отключено.",
+    "groupLabel": "Environment",
+    "groupPlaceholder": "e.g. eKaizen, Personal",
     "failedTestConnection": "Не удалось проверить соединение",
     "failed": "Не удалось",
     "leaveBlankKeepCurrentApiKey": "Оставьте пустым, чтобы сохранить текущий ключ API.",
     "editCompatibleTitle": "Изменить совместимость {type}",
     "compatibleBaseUrlHint": "Используйте базовый URL-адрес (оканчивающийся на /v1) для вашего {type}-совместимого API.",
     "apiKeyForCheck": "API-ключ (для проверки)",
-    "compatibleProdPlaceholder": "{type} Совместимость (Прод.)"
+    "compatibleProdPlaceholder": "{type} Совместимость (Прод.)",
+    "providerTestTimeout": "Provider test timed out — too many connections to test at once"
   },
   "settings": {
     "title": "Настройки",
@@ -1496,6 +1547,8 @@
     "leastUsedDesc": "Выберите наименее использованную учетную запись",
     "costOpt": "Опция стоимости",
     "costOptDesc": "Предпочитаю самый дешевый доступный аккаунт",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each account once before reshuffling",
     "stickyLimit": "Липкий лимит",
     "stickyLimitDesc": "Звонки на аккаунт до переключения",
     "modelAliases": "Псевдонимы моделей",
@@ -1734,7 +1787,12 @@
     "customPricingNote": "Вы можете переопределить цены по умолчанию для определенных моделей. Пользовательские переопределения имеют приоритет над ценами, определяемыми автоматически.",
     "editPricing": "Изменить цену",
     "viewFullDetails": "Посмотреть полную информацию",
-    "themeCoral": "Коралл"
+    "themeCoral": "Коралл",
+    "cliFingerprint": "CLI Fingerprint Matching",
+    "cliFingerprintDesc": "Match native CLI binary signatures when proxying requests. Reorders headers and body fields to look identical to the official CLI tools. Your proxy IP is preserved.",
+    "cliFingerprintEnabled": "{count} provider(s) with CLI fingerprint active",
+    "enableFingerprintTitle": "Enable fingerprint for {provider}",
+    "disableFingerprintTitle": "Disable fingerprint for {provider}"
   },
   "translator": {
     "title": "Переводчик",
@@ -2020,6 +2078,9 @@
     "rawPlanWithValue": "Необработанный план: {plan}",
     "noPlanFromProvider": "Нет плана от провайдера",
     "noQuotaData": "Нет данных о квотах",
+    "ungrouped": "Ungrouped",
+    "viewFlat": "Flat",
+    "viewByEnvironment": "By Environment",
     "noQuotaDataAvailable": "Нет данных о квотах",
     "noAccountsForTierFilter": "Аккаунты для фильтра уровня не найдены",
     "tierAll": "Все",
@@ -2419,5 +2480,45 @@
     "featureWebhooks": "Настройка вебхуков и подписки на события",
     "featureSwagger": "Автоматическая генерация спецификаций OpenAPI / Swagger",
     "featureAuth": "Управление API-ключами и OAuth-областями для каждого эндпоинта"
+  },
+  "agents": {
+    "title": "CLI Agents",
+    "description": "Discover installed CLI agents on your system. Add custom agents for auto-detection.",
+    "refresh": "Refresh",
+    "installed": "Installed",
+    "notFound": "Not Found",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "remove": "Remove",
+    "addCustomAgent": "Add Custom Agent",
+    "addCustomAgentDesc": "Register any CLI tool for detection. It will be scanned automatically on refresh.",
+    "agentName": "Agent Name",
+    "binaryName": "Binary Name",
+    "versionCommand": "Version Command",
+    "spawnArgs": "Spawn Args",
+    "addAgent": "Add Agent"
+  },
+  "autoCombo": {
+    "title": "Auto-Combo Engine",
+    "statusNormal": "Normal",
+    "statusIncident": "Incident Mode",
+    "modePack": "Mode Pack",
+    "providerScores": "Provider Scores",
+    "noAutoCombo": "No auto-combo configured.",
+    "excludedProviders": "Excluded Providers",
+    "noExclusions": "No providers currently excluded.",
+    "factorQuota": "Quota",
+    "factorHealth": "Health",
+    "factorCost": "Cost",
+    "factorLatency": "Latency",
+    "factorTaskFit": "Task Fit",
+    "factorStability": "Stability",
+    "factorTierPriority": "Tier Priority",
+    "factorTierPriorityDesc": "Prefers accounts with higher quota tiers (Ultra/Pro over Free)",
+    "scoreFactorBreakdown": "Scoring Factors",
+    "modePackShipFast": "Ship Fast",
+    "modePackCostSaver": "Cost Saver",
+    "modePackQualityFirst": "Quality First",
+    "modePackOfflineFriendly": "Offline Friendly"
   }
 }

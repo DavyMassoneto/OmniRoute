@@ -138,7 +138,11 @@
     "media": "Media",
     "mediaDescription": "Generate images, videos, and music",
     "themes": "Themes",
-    "themesDescription": "Choose a color theme for the whole dashboard panel"
+    "themesDescription": "Choose a color theme for the whole dashboard panel",
+    "mcp": "MCP",
+    "mcpDescription": "Model Context Protocol server management and tools",
+    "a2a": "A2A",
+    "a2aDescription": "Agent-to-Agent protocol tasks and observability"
   },
   "home": {
     "quickStart": "Rask start",
@@ -456,7 +460,9 @@
       "cline": "Cline AI-kodingsassistent CLI",
       "kilo": "Kilokode AI Assistant CLI",
       "cursor": "Cursor AI Code Editor",
-      "continue": "Fortsett AI Assistant"
+      "continue": "Fortsett AI Assistant",
+      "opencode": "OpenCode AI coding agent (Terminal)",
+      "kiro": "Amazon Kiro — AI-powered IDE"
     },
     "guides": {
       "cursor": {
@@ -503,6 +509,42 @@
           "4": {
             "title": "Legg til modellkonfig",
             "desc": "Legg til følgende konfigurasjon til modellarrayet ditt:"
+          }
+        }
+      },
+      "opencode": {
+        "steps": {
+          "1": {
+            "title": "Install OpenCode",
+            "desc": "Install via npm: npm install -g opencode-ai"
+          },
+          "2": {
+            "title": "API Key"
+          },
+          "3": {
+            "title": "Set Base URL",
+            "desc": "opencode config set baseUrl {{baseUrl}}"
+          },
+          "4": {
+            "title": "Select Model"
+          }
+        }
+      },
+      "kiro": {
+        "steps": {
+          "1": {
+            "title": "Open Kiro Settings",
+            "desc": "Go to Settings → AI Provider"
+          },
+          "2": {
+            "title": "Base URL",
+            "desc": "Paste your OmniRoute endpoint URL"
+          },
+          "3": {
+            "title": "API Key"
+          },
+          "4": {
+            "title": "Select Model"
           }
         }
       }
@@ -562,6 +604,8 @@
     "randomDesc": "Ensartet tilfeldig valg, deretter fallback til gjenværende modeller",
     "leastUsedDesc": "Velger modellen med færrest forespørsler, og balanserer belastningen over tid",
     "costOptimizedDesc": "Ruter til den billigste modellen først basert på priser",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each model once before reshuffling",
     "models": "Modeller",
     "autoBalance": "Autobalanse",
     "advancedSettings": "Avanserte innstillinger",
@@ -704,7 +748,9 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       }
-    }
+    },
+    "templateFreeStack": "Free Stack ($0)",
+    "templateFreeStackDesc": "Round-robin across all free providers: Kiro (Claude), iFlow (5 models), Qwen (4 models), Gemini CLI. Zero cost, never stops coding."
   },
   "costs": {
     "title": "Kostnader",
@@ -816,7 +862,9 @@
     "a2aQuickStartTitle": "A2A hurtigstart",
     "a2aQuickStartStep1": "Oppdag agentkortet på `/.well-known/agent.json`.",
     "a2aQuickStartStep2": "Send JSON-RPC-forespørsler til `POST /a2a` ved å bruke `message/send` eller `message/stream`.",
-    "a2aQuickStartStep3": "Spor og kontroller oppgaver ved å bruke `tasks/get` og `tasks/cancel`."
+    "a2aQuickStartStep3": "Spor og kontroller oppgaver ved å bruke `tasks/get` og `tasks/cancel`.",
+    "completionsLegacy": "Completions (Legacy)",
+    "completionsLegacyDesc": "Legacy OpenAI text completions — accepts both prompt string and messages array format"
   },
   "mcpDashboard": {
     "loading": "Laster inn MCP-dashbordet ...",
@@ -1332,13 +1380,16 @@
     "email": "E-post",
     "healthCheckMinutes": "Helsesjekk (min)",
     "healthCheckHint": "Proaktivt token-oppdateringsintervall. 0 = deaktivert.",
+    "groupLabel": "Environment",
+    "groupPlaceholder": "e.g. eKaizen, Personal",
     "failedTestConnection": "Kunne ikke teste tilkoblingen",
     "failed": "Mislyktes",
     "leaveBlankKeepCurrentApiKey": "La stå tomt for å beholde gjeldende API-nøkkel.",
     "editCompatibleTitle": "Rediger {type} Kompatibel",
     "compatibleBaseUrlHint": "Bruk basis-URLen (som slutter på /v1) for din {type}-kompatible API.",
     "apiKeyForCheck": "API-nøkkel (for sjekk)",
-    "compatibleProdPlaceholder": "{type} Kompatibel (Prod)"
+    "compatibleProdPlaceholder": "{type} Kompatibel (Prod)",
+    "providerTestTimeout": "Provider test timed out — too many connections to test at once"
   },
   "settings": {
     "title": "Innstillinger",
@@ -1496,6 +1547,8 @@
     "leastUsedDesc": "Velg minst nylig brukte konto",
     "costOpt": "Kostnad Opt",
     "costOptDesc": "Foretrekker den billigste tilgjengelige kontoen",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each account once before reshuffling",
     "stickyLimit": "Sticky Limit",
     "stickyLimitDesc": "Anrop per konto før bytte",
     "modelAliases": "Modellaliaser",
@@ -1734,7 +1787,12 @@
     "customPricingNote": "Du kan overstyre standardpriser for spesifikke modeller. Egendefinerte overstyringer prioriteres fremfor automatisk oppdagede priser.",
     "editPricing": "Rediger priser",
     "viewFullDetails": "Se alle detaljer",
-    "themeCoral": "Korall"
+    "themeCoral": "Korall",
+    "cliFingerprint": "CLI Fingerprint Matching",
+    "cliFingerprintDesc": "Match native CLI binary signatures when proxying requests. Reorders headers and body fields to look identical to the official CLI tools. Your proxy IP is preserved.",
+    "cliFingerprintEnabled": "{count} provider(s) with CLI fingerprint active",
+    "enableFingerprintTitle": "Enable fingerprint for {provider}",
+    "disableFingerprintTitle": "Disable fingerprint for {provider}"
   },
   "translator": {
     "title": "Oversetter",
@@ -2020,6 +2078,9 @@
     "rawPlanWithValue": "Rå plan: {plan}",
     "noPlanFromProvider": "Ingen plan fra leverandøren",
     "noQuotaData": "Ingen kvotedata",
+    "ungrouped": "Ungrouped",
+    "viewFlat": "Flat",
+    "viewByEnvironment": "By Environment",
     "noQuotaDataAvailable": "Ingen kvotedata tilgjengelig",
     "noAccountsForTierFilter": "Fant ingen kontoer for nivåfilter",
     "tierAll": "Alle",
@@ -2419,5 +2480,45 @@
     "featureWebhooks": "Webhook configuration and event subscriptions",
     "featureSwagger": "OpenAPI / Swagger spec auto-generation",
     "featureAuth": "API key and OAuth scope management per endpoint"
+  },
+  "agents": {
+    "title": "CLI Agents",
+    "description": "Discover installed CLI agents on your system. Add custom agents for auto-detection.",
+    "refresh": "Refresh",
+    "installed": "Installed",
+    "notFound": "Not Found",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "remove": "Remove",
+    "addCustomAgent": "Add Custom Agent",
+    "addCustomAgentDesc": "Register any CLI tool for detection. It will be scanned automatically on refresh.",
+    "agentName": "Agent Name",
+    "binaryName": "Binary Name",
+    "versionCommand": "Version Command",
+    "spawnArgs": "Spawn Args",
+    "addAgent": "Add Agent"
+  },
+  "autoCombo": {
+    "title": "Auto-Combo Engine",
+    "statusNormal": "Normal",
+    "statusIncident": "Incident Mode",
+    "modePack": "Mode Pack",
+    "providerScores": "Provider Scores",
+    "noAutoCombo": "No auto-combo configured.",
+    "excludedProviders": "Excluded Providers",
+    "noExclusions": "No providers currently excluded.",
+    "factorQuota": "Quota",
+    "factorHealth": "Health",
+    "factorCost": "Cost",
+    "factorLatency": "Latency",
+    "factorTaskFit": "Task Fit",
+    "factorStability": "Stability",
+    "factorTierPriority": "Tier Priority",
+    "factorTierPriorityDesc": "Prefers accounts with higher quota tiers (Ultra/Pro over Free)",
+    "scoreFactorBreakdown": "Scoring Factors",
+    "modePackShipFast": "Ship Fast",
+    "modePackCostSaver": "Cost Saver",
+    "modePackQualityFirst": "Quality First",
+    "modePackOfflineFriendly": "Offline Friendly"
   }
 }

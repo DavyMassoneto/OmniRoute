@@ -2,7 +2,7 @@
 
 ### Never stop coding. Smart routing to **FREE & low-cost AI models** with automatic fallback.
 
-_Your universal API proxy — one endpoint, 36+ providers, zero downtime. Now with **MCP & A2A** agent orchestration._
+_Your universal API proxy — one endpoint, 44+ providers, zero downtime. Now with **MCP & A2A** agent orchestration._
 
 **Chat Completions • Embeddings • Image Generation • Video • Music • Audio • Reranking • MCP Server • A2A Protocol • 100% TypeScript**
 
@@ -234,7 +234,7 @@ OpenAI uses one format, Claude (Anthropic) uses another, Gemini yet another. If 
 
 **How OmniRoute solves it:**
 
-- **Unified Endpoint** — A single `http://localhost:20128/v1` serves as proxy for all 36+ providers
+- **Unified Endpoint** — A single `http://localhost:20128/v1` serves as proxy for all 44+ providers
 - **Format Translation** — Automatic and transparent: OpenAI ↔ Claude ↔ Gemini ↔ Responses API
 - **Response Sanitization** — Strips non-standard fields (`x_groq`, `usage_breakdown`, `service_tier`) that break OpenAI SDK v1.83+
 - **Role Normalization** — Converts `developer` → `system` for non-OpenAI providers; `system` → `user` for GLM/ERNIE
@@ -268,10 +268,10 @@ Not everyone can pay $20–200/month for AI subscriptions. Students, devs from e
 
 **How OmniRoute solves it:**
 
-- **Free Tier Providers Built-in** — Native support for 100% free providers: iFlow (8 unlimited models), Qwen (3 unlimited models), Kiro (Claude for free), Gemini CLI (180K/month free)
+- **Free Tier Providers Built-in** — Native support for 100% free providers: iFlow (5 unlimited models via OAuth: kimi-k2-thinking, qwen3-coder-plus, deepseek-r1, minimax-m2, kimi-k2), Qwen (4 unlimited models: qwen3-coder-plus, qwen3-coder-flash, qwen3-coder-next, vision-model), Kiro (Claude + AWS Builder ID for free), Gemini CLI (180K tokens/month free)
 - **Ollama Cloud** — Cloud-hosted Ollama models at `api.ollama.com` with free "Light usage" tier; use `ollamacloud/<model>` prefix
 - **Free-Only Combos** — Chain `gc/gemini-3-flash → if/kimi-k2-thinking → qw/qwen3-coder-plus` = $0/month with zero downtime
-- **NVIDIA NIM Free Credits** — 1000 free credits integrated
+- **NVIDIA NIM Free Access** — ~40 RPM dev-forever free access to 70+ models at build.nvidia.com (transitioning from credits to pure rate limits)
 - **Cost Optimized Strategy** — Routing strategy that automatically chooses the cheapest available provider
 
 </details>
@@ -320,7 +320,7 @@ Developers use Cursor, Claude Code, Codex CLI, OpenClaw, Gemini CLI, Kilo Code..
 - **CLI Tools Dashboard** — Dedicated page with one-click setup for Claude Code, Codex CLI, OpenClaw, Kilo Code, Antigravity, Cline
 - **GitHub Copilot Config Generator** — Generates `chatLanguageModels.json` for VS Code with bulk model selection
 - **Onboarding Wizard** — Guided 4-step setup for first-time users
-- **One endpoint, all models** — Configure `http://localhost:20128/v1` once, access 36+ providers
+- **One endpoint, all models** — Configure `http://localhost:20128/v1` once, access 44+ providers
 
 </details>
 
@@ -702,6 +702,22 @@ Outcome: deep fallback depth for deadline-critical workloads
 
 ---
 
+## 🆓 Start Free — Zero Configuration Cost
+
+> Setup AI coding in minutes at **$0/month**. Connect these free accounts and use the built-in **Free Stack** combo.
+
+| Step | Action                                             | Providers Unlocked                                                 |
+| ---- | -------------------------------------------------- | ------------------------------------------------------------------ |
+| 1    | Connect **Kiro** (AWS Builder ID OAuth)            | Claude Sonnet 4.5, Haiku 4.5 — **unlimited**                       |
+| 2    | Connect **iFlow** (Google OAuth)                   | kimi-k2-thinking, qwen3-coder-plus, deepseek-r1... — **unlimited** |
+| 3    | Connect **Qwen** (Device Code)                     | qwen3-coder-plus, qwen3-coder-flash... — **unlimited**             |
+| 4    | Connect **Gemini CLI** (Google OAuth)              | gemini-3-flash, gemini-2.5-pro — **180K/mo free**                  |
+| 5    | `/dashboard/combos` → **Free Stack ($0)** template | Round-robin all free providers automatically                       |
+
+**Point any IDE/CLI to:** `http://localhost:20128/v1` · API Key: `any-string` · Done.
+
+> **Optional extra coverage (also free):** Groq API key (30 RPM free), NVIDIA NIM (40 RPM free, 70+ models), Cerebras (1M tok/day).
+
 ## ⚡ Quick Start
 
 ### 1) Install and run
@@ -710,6 +726,14 @@ Outcome: deep fallback depth for deadline-critical workloads
 npm install -g omniroute
 omniroute
 ```
+
+> **pnpm users:** Run `pnpm approve-builds -g` after install to enable native build scripts required by `better-sqlite3` and `@swc/core`:
+>
+> ```bash
+> pnpm install -g omniroute
+> pnpm approve-builds -g   # Select all packages → approve
+> omniroute
+> ```
 
 Dashboard opens at `http://localhost:20128` and API base URL is `http://localhost:20128/v1`.
 
@@ -874,28 +898,130 @@ When minimized, OmniRoute lives in your system tray with quick actions:
 
 ## 💰 Pricing at a Glance
 
-| Tier                | Provider          | Cost                    | Quota Reset      | Best For             |
-| ------------------- | ----------------- | ----------------------- | ---------------- | -------------------- |
-| **💳 SUBSCRIPTION** | Claude Code (Pro) | $20/mo                  | 5h + weekly      | Already subscribed   |
-|                     | Codex (Plus/Pro)  | $20-200/mo              | 5h + weekly      | OpenAI users         |
-|                     | Gemini CLI        | **FREE**                | 180K/mo + 1K/day | Everyone!            |
-|                     | GitHub Copilot    | $10-19/mo               | Monthly          | GitHub users         |
-| **🔑 API KEY**      | NVIDIA NIM        | **FREE** (1000 credits) | One-time         | Free tier testing    |
-|                     | DeepSeek          | Pay-per-use             | None             | Best price/quality   |
-|                     | Groq              | Free tier + paid        | Rate limited     | Ultra-fast inference |
-|                     | xAI (Grok)        | Pay-per-use             | None             | Grok models          |
-|                     | Mistral           | Free tier + paid        | Rate limited     | European AI          |
-|                     | OpenRouter        | Pay-per-use             | None             | 100+ models          |
-| **💰 CHEAP**        | GLM-4.7           | $0.6/1M                 | Daily 10AM       | Budget backup        |
-|                     | MiniMax M2.1      | $0.2/1M                 | 5-hour rolling   | Cheapest option      |
-|                     | Kimi K2           | $9/mo flat              | 10M tokens/mo    | Predictable cost     |
-| **🆓 FREE**         | iFlow             | $0                      | Unlimited        | 8 models free        |
-|                     | Qwen              | $0                      | Unlimited        | 3 models free        |
-|                     | Kiro              | $0                      | Unlimited        | Claude free          |
+| Tier                | Provider          | Cost                   | Quota Reset      | Best For                |
+| ------------------- | ----------------- | ---------------------- | ---------------- | ----------------------- |
+| **💳 SUBSCRIPTION** | Claude Code (Pro) | $20/mo                 | 5h + weekly      | Already subscribed      |
+|                     | Codex (Plus/Pro)  | $20-200/mo             | 5h + weekly      | OpenAI users            |
+|                     | Gemini CLI        | **FREE**               | 180K/mo + 1K/day | Everyone!               |
+|                     | GitHub Copilot    | $10-19/mo              | Monthly          | GitHub users            |
+| **🔑 API KEY**      | NVIDIA NIM        | **FREE** (dev forever) | ~40 RPM          | 70+ open models         |
+|                     | Cerebras          | **FREE** (1M tok/day)  | 60K TPM / 30 RPM | World's fastest         |
+|                     | Groq              | **FREE** (30 RPM)      | 14.4K RPD        | Ultra-fast Llama/Gemma  |
+|                     | DeepSeek          | Pay-per-use            | None             | Best price/quality      |
+|                     | xAI (Grok)        | Pay-per-use            | None             | Grok models             |
+|                     | Mistral           | Free trial + paid      | Rate limited     | European AI             |
+|                     | OpenRouter        | Pay-per-use            | None             | 100+ models aggr.       |
+| **💰 CHEAP**        | GLM-4.7           | $0.6/1M                | Daily 10AM       | Budget backup           |
+|                     | MiniMax M2.1      | $0.2/1M                | 5-hour rolling   | Cheapest option         |
+|                     | Kimi K2           | $9/mo flat             | 10M tokens/mo    | Predictable cost        |
+| **🆓 FREE**         | iFlow             | **$0**                 | Unlimited        | 5 models unlimited      |
+|                     | Qwen              | **$0**                 | Unlimited        | 4 models unlimited      |
+|                     | Kiro              | **$0**                 | Unlimited        | Claude (AWS Builder ID) |
 
-**💡 Pro Tip:** Start with Gemini CLI (180K free/month) + iFlow (unlimited free) combo = $0 cost!
+**💡 $0 Combo Stack:** Gemini CLI (180K/mo) → iFlow (unlimited: kimi-k2-thinking, qwen3-coder-plus, deepseek-r1) → Kiro (Claude for free) → Qwen (4 models, unlimited) — **Zero cost, never stops coding.** When Gemini quota runs out, OmniRoute auto-falls back to iFlow or Kiro with zero config.
 
 ---
+
+---
+
+## 🆓 Free Models — What You Actually Get
+
+> All models below are **100% free with zero credit card required**. OmniRoute auto-routes between them when one quota runs out — combine them all for an unbreakable $0 combo.
+
+### 🔵 CLAUDE MODELS (via Kiro — AWS Builder ID)
+
+| Model               | Prefix | Limit         | Rate Limit            |
+| ------------------- | ------ | ------------- | --------------------- |
+| `claude-sonnet-4.5` | `kr/`  | **Unlimited** | No reported daily cap |
+| `claude-haiku-4.5`  | `kr/`  | **Unlimited** | No reported daily cap |
+| `claude-opus-4.6`   | `kr/`  | **Unlimited** | Latest Opus via Kiro  |
+
+### 🟢 IFLOW MODELS (Free OAuth — No Credit Card)
+
+| Model              | Prefix | Limit         | Rate Limit      |
+| ------------------ | ------ | ------------- | --------------- |
+| `kimi-k2-thinking` | `if/`  | **Unlimited** | No reported cap |
+| `qwen3-coder-plus` | `if/`  | **Unlimited** | No reported cap |
+| `deepseek-r1`      | `if/`  | **Unlimited** | No reported cap |
+| `minimax-m2.1`     | `if/`  | **Unlimited** | No reported cap |
+| `kimi-k2`          | `if/`  | **Unlimited** | No reported cap |
+
+### 🟡 QWEN MODELS (Device Code Auth)
+
+| Model               | Prefix | Limit         | Rate Limit          |
+| ------------------- | ------ | ------------- | ------------------- |
+| `qwen3-coder-plus`  | `qw/`  | **Unlimited** | No reported cap     |
+| `qwen3-coder-flash` | `qw/`  | **Unlimited** | No reported cap     |
+| `qwen3-coder-next`  | `qw/`  | **Unlimited** | No reported cap     |
+| `vision-model`      | `qw/`  | **Unlimited** | Multimodal (images) |
+
+### 🟣 GEMINI CLI (Google OAuth)
+
+| Model                    | Prefix | Limit                       | Rate Limit    |
+| ------------------------ | ------ | --------------------------- | ------------- |
+| `gemini-3-flash-preview` | `gc/`  | **180K tok/month** + 1K/day | Monthly reset |
+| `gemini-2.5-pro`         | `gc/`  | 180K/month (shared pool)    | High quality  |
+
+### ⚫ NVIDIA NIM (Free API Key — build.nvidia.com)
+
+| Tier       | Daily Limit  | Rate Limit  | Notes                                                  |
+| ---------- | ------------ | ----------- | ------------------------------------------------------ |
+| Free (Dev) | No token cap | **~40 RPM** | 70+ models; transitioning to pure rate limits mid-2025 |
+
+Popular free models: `moonshotai/kimi-k2.5` (Kimi K2.5), `z-ai/glm4.7` (GLM 4.7), `deepseek-ai/deepseek-v3.2` (DeepSeek V3.2), `nvidia/llama-3.3-70b-instruct`, `deepseek/deepseek-r1`
+
+### ⚪ CEREBRAS (Free API Key — inference.cerebras.ai)
+
+| Tier | Daily Limit       | Rate Limit       | Notes                                       |
+| ---- | ----------------- | ---------------- | ------------------------------------------- |
+| Free | **1M tokens/day** | 60K TPM / 30 RPM | World's fastest LLM inference; resets daily |
+
+Available free: `llama-3.3-70b`, `llama-3.1-8b`, `deepseek-r1-distill-llama-70b`
+
+### 🔴 GROQ (Free API Key — console.groq.com)
+
+| Tier | Daily Limit   | Rate Limit       | Notes                                     |
+| ---- | ------------- | ---------------- | ----------------------------------------- |
+| Free | **14.4K RPD** | 30 RPM per model | No credit card; 429 on limit, not charged |
+
+Available free: `llama-3.3-70b-versatile`, `gemma2-9b-it`, `mixtral-8x7b`, `whisper-large-v3`
+
+> **💡 The Ultimate Free Stack:**
+>
+> ```
+> Kiro (Claude, unlimited)
+>  → iFlow (5 models, unlimited)
+>  → Qwen (4 models, unlimited)
+>  → Gemini CLI (180K/mo)
+>  → Cerebras (1M tok/day)
+>  → Groq (14.4K req/day)
+>  → NVIDIA NIM (40 RPM, 70+ models)
+> ```
+>
+> Configure this as an OmniRoute combo and you'll never pay for AI again.
+
+## 🎙️ Free Transcription Combo
+
+> Transcribe any audio/video for **$0** — Deepgram leads with $200 free, AssemblyAI $50 fallback, Groq Whisper as unlimited emergency backup.
+
+| Provider          | Free Credits           | Best Model                                   | Rate Limit                   |
+| ----------------- | ---------------------- | -------------------------------------------- | ---------------------------- |
+| 🟢 **Deepgram**   | **$200 free** (signup) | `nova-3` — best accuracy, 30+ languages      | No RPM limit on free credits |
+| 🔵 **AssemblyAI** | **$50 free** (signup)  | `universal-3-pro` — chapters, sentiment, PII | No RPM limit on free credits |
+| 🔴 **Groq**       | **Free forever**       | `whisper-large-v3` — OpenAI Whisper          | 30 RPM (rate limited)        |
+
+**Suggested combo in `/dashboard/combos`:**
+
+```
+Name: free-transcription
+Strategy: Priority
+Nodes:
+  [1] deepgram/nova-3          → uses $200 free first
+  [2] assemblyai/universal-3-pro → fallback when Deepgram credits run out
+  [3] groq/whisper-large-v3    → free forever, emergency fallback
+```
+
+Then in `/dashboard/media` → **Transcription** tab: upload any audio or video file → select your combo endpoint → get transcription in supported formats.
 
 ## 💡 Key Features
 
@@ -931,20 +1057,21 @@ OmniRoute v2.0 is built as an operational platform, not just a relay proxy.
 
 ### 🧠 Routing & Intelligence
 
-| Feature                            | What It Does                                                          |
-| ---------------------------------- | --------------------------------------------------------------------- |
-| 🎯 **Smart 4-Tier Fallback**       | Auto-route: Subscription → API Key → Cheap → Free                     |
-| 📊 **Real-Time Quota Tracking**    | Live token count + reset countdown per provider                       |
-| 🔄 **Format Translation**          | OpenAI ↔ Claude ↔ Gemini ↔ Responses with schema-safe conversions     |
-| 👥 **Multi-Account Support**       | Multiple accounts per provider with intelligent selection             |
-| 🔄 **Auto Token Refresh**          | OAuth tokens refresh automatically with retry                         |
-| 🎨 **Custom Combos**               | 6 balancing strategies + fallback chain control                       |
-| 🌐 **Wildcard Router**             | `provider/*` dynamic routing                                          |
-| 🧠 **Thinking Budget Controls**    | Passthrough, auto, custom, and adaptive reasoning limits              |
-| 🔀 **Model Aliases**               | Built-in + custom model aliasing and migration safety                 |
-| ⚡ **Background Degradation**      | Route low-priority background tasks to cheaper models                 |
-| 💬 **System Prompt Injection**     | Global behavior controls applied consistently                         |
-| 📄 **Responses API Compatibility** | Full `/v1/responses` support for Codex and advanced agentic workflows |
+| Feature                            | What It Does                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------ |
+| 🎯 **Smart 4-Tier Fallback**       | Auto-route: Subscription → API Key → Cheap → Free                        |
+| 📊 **Real-Time Quota Tracking**    | Live token count + reset countdown per provider                          |
+| 🔄 **Format Translation**          | OpenAI ↔ Claude ↔ Gemini ↔ Responses with schema-safe conversions        |
+| 👥 **Multi-Account Support**       | Multiple accounts per provider with intelligent selection                |
+| 🔄 **Auto Token Refresh**          | OAuth tokens refresh automatically with retry                            |
+| 🎨 **Custom Combos**               | 6 balancing strategies + fallback chain control                          |
+| 🌐 **Wildcard Router**             | `provider/*` dynamic routing                                             |
+| 🧠 **Thinking Budget Controls**    | Passthrough, auto, custom, and adaptive reasoning limits                 |
+| 🔀 **Model Aliases**               | Built-in + custom model aliasing and migration safety                    |
+| ⚡ **Background Degradation**      | Route low-priority background tasks to cheaper models                    |
+| 🧪 **Task-Aware Smart Routing**    | Auto-select model by content type (coding/vision/analysis/summarization) |
+| 💬 **System Prompt Injection**     | Global behavior controls applied consistently                            |
+| 📄 **Responses API Compatibility** | Full `/v1/responses` support for Codex and advanced agentic workflows    |
 
 ### 🎵 Multi-Modal APIs
 
@@ -1165,6 +1292,23 @@ Models:
   cx/gpt-5.1-codex-max
 ```
 
+#### Codex Account Limit Management (5h + Weekly)
+
+Each Codex account now has policy toggles in `Dashboard -> Providers`:
+
+- `5h` (ON/OFF): enforce the 5-hour window threshold policy.
+- `Weekly` (ON/OFF): enforce the weekly window threshold policy.
+- Threshold behavior: when an enabled window reaches >=90% usage, that account is skipped.
+- Rotation behavior: OmniRoute routes to the next eligible Codex account automatically.
+- Reset behavior: when the provider `resetAt` time passes, the account becomes eligible again automatically.
+
+Scenarios:
+
+- `5h ON` + `Weekly ON`: account is skipped when either window reaches threshold.
+- `5h OFF` + `Weekly ON`: only weekly usage can block the account.
+- `5h ON` + `Weekly OFF`: only 5-hour usage can block the account.
+- `resetAt` passed: account re-enters rotation automatically (no manual re-enable).
+
 ### Gemini CLI (FREE 180K/month!)
 
 ```bash
@@ -1197,7 +1341,7 @@ Models:
 <details>
 <summary><b>🔑 API Key Providers</b></summary>
 
-### NVIDIA NIM (FREE 1000 credits!)
+### NVIDIA NIM (FREE developer access — 70+ models)
 
 1. Sign up: [build.nvidia.com](https://build.nvidia.com)
 2. Get free API key (1000 inference credits included)
@@ -1276,7 +1420,7 @@ Models:
 <details>
 <summary><b>🆓 FREE Providers (Emergency Backup)</b></summary>
 
-### iFlow (8 FREE models)
+### iFlow (5 FREE models via OAuth)
 
 ```bash
 Dashboard → Connect iFlow
@@ -1291,7 +1435,7 @@ Models:
   if/deepseek-r1
 ```
 
-### Qwen (3 FREE models)
+### Qwen (4 FREE models via Device Code)
 
 ```bash
 Dashboard → Connect Qwen
@@ -1508,11 +1652,102 @@ opencode
 - OmniRoute v1.0.6+ includes fallback validation via chat completions
 - Ensure base URL includes `/v1` suffix
 
-### 🔐 OAuth em Servidor Remoto (Remote OAuth Setup)
+### 🔐 OAuth on a Remote Server
 
+<a name="oauth-on-a-remote-server"></a>
 <a name="oauth-em-servidor-remoto"></a>
 
-> **⚠️ IMPORTANTE para usuários com OmniRoute em VPS/Docker/servidor remoto**
+> **⚠️ Important for users running OmniRoute on a VPS, Docker, or any remote server**
+
+#### Why does Antigravity / Gemini CLI OAuth fail on remote servers?
+
+The **Antigravity** and **Gemini CLI** providers use **Google OAuth 2.0**. Google requires the `redirect_uri` in the OAuth flow to exactly match one of the pre-registered URIs in the app's Google Cloud Console.
+
+The OAuth credentials bundled in OmniRoute are registered **for `localhost` only**. When you access OmniRoute on a remote server (e.g. `https://omniroute.myserver.com`), Google rejects the authentication with:
+
+```
+Error 400: redirect_uri_mismatch
+```
+
+#### Solution: Configure your own OAuth credentials
+
+You need to create an **OAuth 2.0 Client ID** in Google Cloud Console with your server's URI.
+
+#### Step-by-step
+
+**1. Open Google Cloud Console**
+
+Go to: [https://console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
+
+**2. Create a new OAuth 2.0 Client ID**
+
+- Click **"+ Create Credentials"** → **"OAuth client ID"**
+- Application type: **"Web application"**
+- Name: anything you like (e.g. `OmniRoute Remote`)
+
+**3. Add Authorized Redirect URIs**
+
+In the **"Authorized redirect URIs"** field, add:
+
+```
+https://your-server.com/callback
+```
+
+> Replace `your-server.com` with your server's domain or IP (include the port if needed, e.g. `http://45.33.32.156:20128/callback`).
+
+**4. Save and copy the credentials**
+
+After creating, Google will show the **Client ID** and **Client Secret**.
+
+**5. Set environment variables**
+
+In your `.env` (or Docker environment variables):
+
+```bash
+# For Antigravity:
+ANTIGRAVITY_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+ANTIGRAVITY_OAUTH_CLIENT_SECRET=GOCSPX-your-secret
+
+# For Gemini CLI:
+GEMINI_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GEMINI_OAUTH_CLIENT_SECRET=GOCSPX-your-secret
+GEMINI_CLI_OAUTH_CLIENT_SECRET=GOCSPX-your-secret
+```
+
+**6. Restart OmniRoute**
+
+```bash
+# npm:
+npm run dev
+
+# Docker:
+docker restart omniroute
+```
+
+**7. Try connecting again**
+
+Dashboard → Providers → Antigravity (or Gemini CLI) → OAuth
+
+Google will now redirect correctly to `https://your-server.com/callback`.
+
+---
+
+#### Temporary workaround (without custom credentials)
+
+If you don't want to set up your own credentials right now, you can still use the **manual URL flow**:
+
+1. OmniRoute opens the Google authorization URL
+2. After authorizing, Google tries to redirect to `localhost` (which fails on the remote server)
+3. **Copy the full URL** from your browser's address bar (even if the page doesn't load)
+4. Paste that URL into the field shown in the OmniRoute connection modal
+5. Click **"Connect"**
+
+> This works because the authorization code in the URL is valid regardless of whether the redirect page loaded.
+
+---
+
+<details>
+<summary><b>🇧🇷 Versão em Português</b></summary>
 
 #### Por que o OAuth do Antigravity / Gemini CLI falha em servidores remotos?
 
@@ -1602,6 +1837,8 @@ Se não quiser criar credenciais próprias agora, ainda é possível usar o flux
 </details>
 
 ---
+
+</details>
 
 ## 🛠️ Tech Stack
 
@@ -1697,17 +1934,9 @@ gh release create v2.0.0 --title "v2.0.0" --generate-notes
 
 ## 📊 Star History
 
-<a href="https://star-history.com/#diegosouzapw/OmniRoute&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=diegosouzapw/OmniRoute&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=diegosouzapw/OmniRoute&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=diegosouzapw/OmniRoute&type=Date" />
- </picture>
-</a>
+## Stargazers over time
 
-> 📈 **[View live star history on star-history.com](https://star-history.com/#diegosouzapw/OmniRoute&Date)** — The embedded chart may be cached. Click the link for real-time data.
-
----
+## [![Stargazers over time](https://starchart.cc/diegosouzapw/OmniRoute.svg?variant=adaptive)](https://starchart.cc/diegosouzapw/OmniRoute)
 
 ## 🙏 Acknowledgments
 

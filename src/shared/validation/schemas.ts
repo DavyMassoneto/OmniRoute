@@ -51,6 +51,7 @@ const comboStrategySchema = z.enum([
   "random",
   "least-used",
   "cost-optimized",
+  "strict-random",
 ]);
 
 const comboRuntimeConfigSchema = z
@@ -77,6 +78,7 @@ export const createComboSchema = z.object({
   models: z.array(comboModelEntry).optional().default([]),
   strategy: comboStrategySchema.optional().default("priority"),
   config: comboConfigSchema,
+  allowedProviders: z.array(z.string().max(200)).optional(),
 });
 
 // ──── Auto-Combo Schemas ────
@@ -89,6 +91,7 @@ const scoringWeightsSchema = z
     latencyInv: z.number().min(0).max(1),
     taskFit: z.number().min(0).max(1),
     stability: z.number().min(0).max(1),
+    tierPriority: z.number().min(0).max(1).optional().default(0.05),
   })
   .optional();
 
@@ -124,7 +127,15 @@ export const updateSettingsSchema = z.object({
   hideHealthCheckLogs: z.boolean().optional(),
   // Routing settings (#134)
   fallbackStrategy: z
-    .enum(["fill-first", "round-robin", "p2c", "random", "least-used", "cost-optimized"])
+    .enum([
+      "fill-first",
+      "round-robin",
+      "p2c",
+      "random",
+      "least-used",
+      "cost-optimized",
+      "strict-random",
+    ])
     .optional(),
   wildcardAliases: z.array(z.object({ pattern: z.string(), target: z.string() })).optional(),
   stickyRoundRobinLimit: z.number().int().min(0).max(1000).optional(),
@@ -367,6 +378,58 @@ export const resetStatsActionSchema = z.object({
   action: z.literal("reset-stats"),
 });
 
+const pricingSyncSourceSchema = z.enum(["litellm"]);
+
+export const pricingSyncRequestSchema = z
+  .object({
+    sources: z.array(pricingSyncSourceSchema).min(1).optional(),
+    dryRun: z.boolean().optional(),
+  })
+  .strict();
+
+const taskRoutingModelMapSchema = z
+  .object({
+    coding: z.string().max(200).optional(),
+    creative: z.string().max(200).optional(),
+    analysis: z.string().max(200).optional(),
+    vision: z.string().max(200).optional(),
+    summarization: z.string().max(200).optional(),
+    background: z.string().max(200).optional(),
+    chat: z.string().max(200).optional(),
+  })
+  .strict();
+
+export const updateTaskRoutingSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    taskModelMap: taskRoutingModelMapSchema.optional(),
+    detectionEnabled: z.boolean().optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (
+      value.enabled === undefined &&
+      value.taskModelMap === undefined &&
+      value.detectionEnabled === undefined
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "No valid fields to update",
+        path: [],
+      });
+    }
+  });
+
+export const taskRoutingActionSchema = z.discriminatedUnion("action", [
+  resetStatsActionSchema,
+  z
+    .object({
+      action: z.literal("detect"),
+      body: jsonObjectSchema.optional(),
+    })
+    .strict(),
+]);
+
 export const updateComboDefaultsSchema = z
   .object({
     comboDefaults: comboRuntimeConfigSchema.optional(),
@@ -437,6 +500,12 @@ export const updateThinkingBudgetSchema = z
       });
     }
   });
+
+export const updateCodexServiceTierSchema = z
+  .object({
+    enabled: z.boolean(),
+  })
+  .strict();
 
 const ipFilterModeSchema = z.enum(["blacklist", "whitelist"]);
 const tempBanSchema = z.object({
@@ -675,6 +744,7 @@ export const updateComboSchema = z
     strategy: comboStrategySchema.optional(),
     config: comboRuntimeConfigSchema.optional(),
     isActive: z.boolean().optional(),
+    allowedProviders: z.array(z.string().max(200)).optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -682,7 +752,8 @@ export const updateComboSchema = z
       value.models === undefined &&
       value.strategy === undefined &&
       value.config === undefined &&
-      value.isActive === undefined
+      value.isActive === undefined &&
+      value.allowedProviders === undefined
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -705,13 +776,34 @@ export const evalRunSuiteSchema = z.object({
   outputs: z.record(z.string(), z.string()),
 });
 
+const accessScheduleSchema = z.object({
+  enabled: z.boolean(),
+  from: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format"),
+  until: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format"),
+  days: z.array(z.number().int().min(0).max(6)).min(1, "At least one day is required").max(7),
+  tz: z.string().min(1).max(100),
+});
+
 export const updateKeyPermissionsSchema = z
   .object({
+    name: z.string().trim().min(1).max(200).optional(),
     allowedModels: z.array(z.string().trim().min(1)).max(1000).optional(),
+    allowedConnections: z.array(z.string().uuid()).max(100).optional(),
     noLog: z.boolean().optional(),
+    autoResolve: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+    accessSchedule: z.union([accessScheduleSchema, z.null()]).optional(),
   })
   .superRefine((value, ctx) => {
-    if (value.allowedModels === undefined && value.noLog === undefined) {
+    if (
+      value.name === undefined &&
+      value.allowedModels === undefined &&
+      value.allowedConnections === undefined &&
+      value.noLog === undefined &&
+      value.autoResolve === undefined &&
+      value.isActive === undefined &&
+      value.accessSchedule === undefined
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "No valid fields to update",
@@ -769,6 +861,7 @@ export const updateProviderConnectionSchema = z
     rateLimitedUntil: z.union([z.string(), z.null()]).optional(),
     lastTested: z.union([z.string(), z.null()]).optional(),
     healthCheckInterval: z.coerce.number().int().min(0).optional(),
+    group: z.union([z.string().max(100), z.null()]).optional(),
     // Partial patch of per-connection provider-specific settings (e.g. quota toggles)
     providerSpecificData: z.record(z.string(), z.unknown()).optional(),
   })
@@ -785,10 +878,13 @@ export const updateProviderConnectionSchema = z
 export const providersBatchTestSchema = z
   .object({
     mode: z.enum(["provider", "oauth", "free", "apikey", "compatible", "all"]),
-    providerId: z.string().trim().min(1).optional(),
+    // Frontend may send null when mode != 'provider' — accept and treat as missing
+    providerId: z.string().trim().min(1).nullable().optional(),
   })
   .superRefine((value, ctx) => {
-    if (value.mode === "provider" && !value.providerId) {
+    // Treat null same as undefined
+    const pid = value.providerId ?? null;
+    if (value.mode === "provider" && !pid) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "providerId is required when mode=provider",

@@ -138,7 +138,11 @@
     "media": "Media",
     "mediaDescription": "Generate images, videos, and music",
     "themes": "Themes",
-    "themesDescription": "Choose a color theme for the whole dashboard panel"
+    "themesDescription": "Choose a color theme for the whole dashboard panel",
+    "mcp": "MCP",
+    "mcpDescription": "Model Context Protocol server management and tools",
+    "a2a": "A2A",
+    "a2aDescription": "Agent-to-Agent protocol tasks and observability"
   },
   "home": {
     "quickStart": "빠른 시작",
@@ -456,7 +460,9 @@
       "cline": "Cline AI 코딩 어시스턴트 CLI",
       "kilo": "킬로코드 AI 어시스턴트 CLI",
       "cursor": "커서 AI 코드 편집기",
-      "continue": "AI 어시스턴트 계속하기"
+      "continue": "AI 어시스턴트 계속하기",
+      "opencode": "OpenCode AI coding agent (Terminal)",
+      "kiro": "Amazon Kiro — AI-powered IDE"
     },
     "guides": {
       "cursor": {
@@ -503,6 +509,42 @@
           "4": {
             "title": "모델 구성 추가",
             "desc": "모델 배열에 다음 구성을 추가합니다."
+          }
+        }
+      },
+      "opencode": {
+        "steps": {
+          "1": {
+            "title": "Install OpenCode",
+            "desc": "Install via npm: npm install -g opencode-ai"
+          },
+          "2": {
+            "title": "API Key"
+          },
+          "3": {
+            "title": "Set Base URL",
+            "desc": "opencode config set baseUrl {{baseUrl}}"
+          },
+          "4": {
+            "title": "Select Model"
+          }
+        }
+      },
+      "kiro": {
+        "steps": {
+          "1": {
+            "title": "Open Kiro Settings",
+            "desc": "Go to Settings → AI Provider"
+          },
+          "2": {
+            "title": "Base URL",
+            "desc": "Paste your OmniRoute endpoint URL"
+          },
+          "3": {
+            "title": "API Key"
+          },
+          "4": {
+            "title": "Select Model"
           }
         }
       }
@@ -562,6 +604,8 @@
     "randomDesc": "균일한 무작위 선택 후 나머지 모델로 대체",
     "leastUsedDesc": "시간이 지남에 따라 로드 밸런싱을 통해 요청이 가장 적은 모델을 선택합니다.",
     "costOptimizedDesc": "가격을 기준으로 가장 저렴한 모델로 먼저 라우팅",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each model once before reshuffling",
     "models": "모델",
     "autoBalance": "자동 균형",
     "advancedSettings": "고급 설정",
@@ -704,7 +748,9 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       }
-    }
+    },
+    "templateFreeStack": "Free Stack ($0)",
+    "templateFreeStackDesc": "Round-robin across all free providers: Kiro (Claude), iFlow (5 models), Qwen (4 models), Gemini CLI. Zero cost, never stops coding."
   },
   "costs": {
     "title": "비용",
@@ -816,7 +862,9 @@
     "a2aQuickStartTitle": "A2A Quick Start",
     "a2aQuickStartStep1": "Discover the agent card at `/.well-known/agent.json`.",
     "a2aQuickStartStep2": "Send JSON-RPC requests to `POST /a2a` using `message/send` or `message/stream`.",
-    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`."
+    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`.",
+    "completionsLegacy": "Completions (Legacy)",
+    "completionsLegacyDesc": "Legacy OpenAI text completions — accepts both prompt string and messages array format"
   },
   "mcpDashboard": {
     "loading": "Loading MCP dashboard...",
@@ -1332,13 +1380,16 @@
     "email": "이메일",
     "healthCheckMinutes": "상태 점검(분)",
     "healthCheckHint": "사전 토큰 새로 고침 간격. 0 = 비활성화됨.",
+    "groupLabel": "Environment",
+    "groupPlaceholder": "e.g. eKaizen, Personal",
     "failedTestConnection": "연결을 테스트하지 못했습니다.",
     "failed": "실패",
     "leaveBlankKeepCurrentApiKey": "현재 API 키를 유지하려면 비워 두세요.",
     "editCompatibleTitle": "{type} 호환 가능 편집",
     "compatibleBaseUrlHint": "{type} 호환 API에는 기본 URL(/v1로 끝남)을 사용하세요.",
     "apiKeyForCheck": "API Key(확인용)",
-    "compatibleProdPlaceholder": "{type} 호환 가능(프로덕션)"
+    "compatibleProdPlaceholder": "{type} 호환 가능(프로덕션)",
+    "providerTestTimeout": "Provider test timed out — too many connections to test at once"
   },
   "settings": {
     "title": "설정",
@@ -1496,6 +1547,8 @@
     "leastUsedDesc": "최근에 가장 적게 사용한 계정 선택",
     "costOpt": "비용 선택",
     "costOptDesc": "가장 저렴한 계정을 선호합니다",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each account once before reshuffling",
     "stickyLimit": "고정 한도",
     "stickyLimitDesc": "전환 전 계정당 통화",
     "modelAliases": "모델 별칭",
@@ -1734,7 +1787,12 @@
     "customPricingNote": "특정 모델의 기본 가격을 재정의할 수 있습니다. 맞춤 재정의는 자동 감지된 가격보다 우선 적용됩니다.",
     "editPricing": "가격 편집",
     "viewFullDetails": "전체 세부정보 보기",
-    "themeCoral": "코랄"
+    "themeCoral": "코랄",
+    "cliFingerprint": "CLI Fingerprint Matching",
+    "cliFingerprintDesc": "Match native CLI binary signatures when proxying requests. Reorders headers and body fields to look identical to the official CLI tools. Your proxy IP is preserved.",
+    "cliFingerprintEnabled": "{count} provider(s) with CLI fingerprint active",
+    "enableFingerprintTitle": "Enable fingerprint for {provider}",
+    "disableFingerprintTitle": "Disable fingerprint for {provider}"
   },
   "translator": {
     "title": "번역기",
@@ -2020,6 +2078,9 @@
     "rawPlanWithValue": "기본 계획: {plan}",
     "noPlanFromProvider": "공급자의 계획 없음",
     "noQuotaData": "할당량 데이터 없음",
+    "ungrouped": "Ungrouped",
+    "viewFlat": "Flat",
+    "viewByEnvironment": "By Environment",
     "noQuotaDataAvailable": "사용 가능한 할당량 데이터가 없습니다.",
     "noAccountsForTierFilter": "등급 필터에 대한 계정을 찾을 수 없습니다.",
     "tierAll": "모두",
@@ -2419,5 +2480,45 @@
     "featureWebhooks": "웹훅 구성 및 이벤트 구독",
     "featureSwagger": "OpenAPI / Swagger 사양 자동 생성",
     "featureAuth": "엔드포인트별 API 키 및 OAuth 범위 관리"
+  },
+  "agents": {
+    "title": "CLI Agents",
+    "description": "Discover installed CLI agents on your system. Add custom agents for auto-detection.",
+    "refresh": "Refresh",
+    "installed": "Installed",
+    "notFound": "Not Found",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "remove": "Remove",
+    "addCustomAgent": "Add Custom Agent",
+    "addCustomAgentDesc": "Register any CLI tool for detection. It will be scanned automatically on refresh.",
+    "agentName": "Agent Name",
+    "binaryName": "Binary Name",
+    "versionCommand": "Version Command",
+    "spawnArgs": "Spawn Args",
+    "addAgent": "Add Agent"
+  },
+  "autoCombo": {
+    "title": "Auto-Combo Engine",
+    "statusNormal": "Normal",
+    "statusIncident": "Incident Mode",
+    "modePack": "Mode Pack",
+    "providerScores": "Provider Scores",
+    "noAutoCombo": "No auto-combo configured.",
+    "excludedProviders": "Excluded Providers",
+    "noExclusions": "No providers currently excluded.",
+    "factorQuota": "Quota",
+    "factorHealth": "Health",
+    "factorCost": "Cost",
+    "factorLatency": "Latency",
+    "factorTaskFit": "Task Fit",
+    "factorStability": "Stability",
+    "factorTierPriority": "Tier Priority",
+    "factorTierPriorityDesc": "Prefers accounts with higher quota tiers (Ultra/Pro over Free)",
+    "scoreFactorBreakdown": "Scoring Factors",
+    "modePackShipFast": "Ship Fast",
+    "modePackCostSaver": "Cost Saver",
+    "modePackQualityFirst": "Quality First",
+    "modePackOfflineFriendly": "Offline Friendly"
   }
 }

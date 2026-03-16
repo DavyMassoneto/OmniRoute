@@ -17,6 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir, platform } from "node:os";
+import { isNativeBinaryCompatible } from "../scripts/native-binary-compat.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -190,6 +191,29 @@ if (!existsSync(serverJs)) {
   console.error("\x1b[31m✖ Server not found at:\x1b[0m", serverJs);
   console.error("  This usually means the package was not built correctly.");
   console.error("  Try reinstalling: npm install -g omniroute");
+  process.exit(1);
+}
+
+// ── Pre-flight: verify better-sqlite3 native binary ───────
+// Verify the binary's actual target platform/arch before trusting dlopen.
+// This avoids the macOS false positive where a bundled linux-x64 addon can
+// appear to load even though the runtime will fail when better-sqlite3 starts.
+const sqliteBinary = join(
+  APP_DIR,
+  "node_modules",
+  "better-sqlite3",
+  "build",
+  "Release",
+  "better_sqlite3.node"
+);
+if (existsSync(sqliteBinary) && !isNativeBinaryCompatible(sqliteBinary)) {
+  console.error(
+    "\x1b[31m✖ better-sqlite3 native module is incompatible with this platform.\x1b[0m"
+  );
+  console.error(`  Run: cd ${APP_DIR} && npm rebuild better-sqlite3`);
+  if (platform() === "darwin") {
+    console.error("  If build tools are missing: xcode-select --install");
+  }
   process.exit(1);
 }
 

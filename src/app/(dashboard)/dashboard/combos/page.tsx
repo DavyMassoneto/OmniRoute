@@ -27,6 +27,14 @@ const STRATEGY_OPTIONS = [
   { value: "random", labelKey: "random", descKey: "randomDesc", icon: "shuffle" },
   { value: "least-used", labelKey: "leastUsed", descKey: "leastUsedDesc", icon: "low_priority" },
   { value: "cost-optimized", labelKey: "costOpt", descKey: "costOptimizedDesc", icon: "savings" },
+  {
+    value: "fill-first",
+    labelKey: "fillFirst",
+    descKey: "fillFirstDesc",
+    icon: "stacked_bar_chart",
+  },
+  { value: "p2c", labelKey: "p2c", descKey: "p2cDesc", icon: "compare_arrows" },
+  { value: "strict-random", labelKey: "strictRandom", descKey: "strictRandomDesc", icon: "casino" },
 ];
 
 const STRATEGY_GUIDANCE_FALLBACK = {
@@ -59,6 +67,21 @@ const STRATEGY_GUIDANCE_FALLBACK = {
     when: "Use when minimizing cost is the top priority.",
     avoid: "Avoid when pricing data is missing or outdated.",
     example: "Example: Batch or background jobs where lower cost matters most.",
+  },
+  "fill-first": {
+    when: "Use when you want to drain one provider's quota fully before moving to the next.",
+    avoid: "Avoid when you need request-level load balancing across providers.",
+    example: "Example: Use all $200 Deepgram credits before falling to Groq.",
+  },
+  p2c: {
+    when: "Use when you want low-latency selection using Power-of-Two-Choices algorithm.",
+    avoid: "Avoid for small combos with 2 or fewer models — no benefit over round-robin.",
+    example: "Example: High-throughput inference across 4+ equivalent model endpoints.",
+  },
+  "strict-random": {
+    when: "Use when you want perfectly even spread — each model used once before repeating.",
+    avoid: "Avoid when models have different quality or latency and order matters.",
+    example: "Example: Multiple accounts of the same model to distribute usage evenly.",
   },
 };
 
@@ -126,6 +149,34 @@ const STRATEGY_RECOMMENDATIONS_FALLBACK = {
       "Use for batch/background jobs where cost is the main KPI.",
     ],
   },
+  "fill-first": {
+    title: "Quota drain strategy",
+    description: "Exhausts one provider's quota before moving to the next in chain.",
+    tips: [
+      "Order models by free quota size — biggest first.",
+      "Enable health checks to skip drained providers.",
+      "Ideal for free-tier stacking (Deepgram → Groq → NIM).",
+    ],
+  },
+  p2c: {
+    title: "Power-of-Two-Choices",
+    description:
+      "Picks the less-loaded of two random candidates per request — low latency at scale.",
+    tips: [
+      "Use with 4+ models for best effect.",
+      "Requires latency telemetry enabled in Settings.",
+      "Great replacement for round-robin in high-throughput combos.",
+    ],
+  },
+  "strict-random": {
+    title: "Shuffle deck distribution",
+    description: "Each model is used exactly once per cycle before reshuffling.",
+    tips: [
+      "Use at least 2 models for meaningful distribution.",
+      "Ideal for same-model accounts to evenly spread quota.",
+      "Guarantees no model is skipped or repeated within a cycle.",
+    ],
+  },
 };
 
 const COMBO_USAGE_GUIDE_STORAGE_KEY = "omniroute:combos:hide-usage-guide";
@@ -140,9 +191,28 @@ const COMBO_TEMPLATE_FALLBACK = {
   costSaverDesc: "Cost-optimized routing for budget-first workloads.",
   balancedTitle: "Balanced load",
   balancedDesc: "Least-used routing to spread demand over time.",
+  freeStackTitle: "Free Stack ($0)",
+  freeStackDesc:
+    "Round-robin across all free providers: Kiro, iFlow, Qwen, Gemini CLI. Zero cost, never stops.",
 };
 
 const COMBO_TEMPLATES = [
+  {
+    id: "free-stack",
+    icon: "volunteer_activism",
+    titleKey: "templateFreeStack",
+    descKey: "templateFreeStackDesc",
+    fallbackTitle: COMBO_TEMPLATE_FALLBACK.freeStackTitle,
+    fallbackDesc: COMBO_TEMPLATE_FALLBACK.freeStackDesc,
+    strategy: "round-robin",
+    suggestedName: "free-stack",
+    isFeatured: true,
+    config: {
+      maxRetries: 3,
+      retryDelayMs: 500,
+      healthCheckEnabled: true,
+    },
+  },
   {
     id: "high-availability",
     icon: "shield",
@@ -208,6 +278,8 @@ function getStrategyBadgeClass(strategy) {
   if (strategy === "random") return "bg-purple-500/15 text-purple-600 dark:text-purple-400";
   if (strategy === "least-used") return "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400";
   if (strategy === "cost-optimized") return "bg-teal-500/15 text-teal-600 dark:text-teal-400";
+  if (strategy === "fill-first") return "bg-orange-500/15 text-orange-600 dark:text-orange-400";
+  if (strategy === "p2c") return "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400";
   return "bg-blue-500/15 text-blue-600 dark:text-blue-400";
 }
 
@@ -976,7 +1048,7 @@ function ComboCard({
             onChange={onToggle}
             title={isDisabled ? t("enableCombo") : t("disableCombo")}
           />
-          <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 transition-opacity">
             <button
               onClick={onTest}
               disabled={testing}
@@ -1346,10 +1418,24 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders }) {
     );
   };
 
+  const FREE_STACK_PRESET_MODELS = [
+    { model: "gc/gemini-3-flash-preview", weight: 0 },
+    { model: "kr/claude-sonnet-4.5", weight: 0 },
+    { model: "if/kimi-k2-thinking", weight: 0 },
+    { model: "if/qwen3-coder-plus", weight: 0 },
+    { model: "qw/qwen3-coder-plus", weight: 0 },
+    { model: "nvidia/llama-3.3-70b-instruct", weight: 0 },
+    { model: "groq/llama-3.3-70b-versatile", weight: 0 },
+  ];
+
   const applyTemplate = (template) => {
     setStrategy(template.strategy);
     setConfig((prev) => ({ ...prev, ...template.config }));
     if (!name.trim()) setName(template.suggestedName);
+    // Pre-fill Free Stack with 7 real free provider models
+    if (template.id === "free-stack") {
+      setModels(FREE_STACK_PRESET_MODELS);
+    }
   };
 
   // Format model display name with readable provider name
@@ -1454,7 +1540,12 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders }) {
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? t("editCombo") : t("createCombo")}>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={isEdit ? t("editCombo") : t("createCombo")}
+        size="full"
+      >
         <div className="flex flex-col gap-3">
           {/* Name */}
           <div>
@@ -1469,7 +1560,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders }) {
           </div>
 
           {!isEdit && (
-            <div className="rounded-lg border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-2.5">
+            <div className="rounded-lg border border-black/8 dark:border-white/8 bg-black/[0.02] dark:bg-white/[0.02] p-3">
               <div className="mb-2">
                 <p className="text-xs font-medium">
                   {getI18nOrFallback(t, "templatesTitle", COMBO_TEMPLATE_FALLBACK.title)}
@@ -1482,27 +1573,40 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders }) {
                   )}
                 </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                 {COMBO_TEMPLATES.map((template) => (
                   <button
                     type="button"
                     key={template.id}
                     onClick={() => applyTemplate(template)}
-                    className="text-left rounded-md border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/[0.03] px-2 py-1.5 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    className={`text-left rounded-md border px-3 py-2 transition-all ${
+                      template.isFeatured
+                        ? "border-emerald-500/50 bg-emerald-500/5 hover:border-emerald-500/80 hover:bg-emerald-500/10 ring-1 ring-emerald-500/20"
+                        : "border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/[0.03] hover:border-primary/40 hover:bg-primary/5"
+                    }`}
                   >
-                    <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[14px] text-primary">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`material-symbols-outlined text-[16px] ${template.isFeatured ? "text-emerald-500" : "text-primary"}`}
+                      >
                         {template.icon}
                       </span>
-                      <span className="text-[11px] font-medium text-text-main">
+                      <span className="text-[12px] font-semibold text-text-main">
                         {getI18nOrFallback(t, template.titleKey, template.fallbackTitle)}
                       </span>
+                      {template.isFeatured && (
+                        <span className="ml-auto text-[9px] font-bold uppercase tracking-wide bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded">
+                          FREE
+                        </span>
+                      )}
                     </div>
-                    <p className="text-[10px] text-text-muted mt-1 leading-4">
+                    <p className="text-[10px] text-text-muted mt-1.5 leading-[1.5]">
                       {getI18nOrFallback(t, template.descKey, template.fallbackDesc)}
                     </p>
-                    <p className="text-[10px] text-primary mt-1">
-                      {getI18nOrFallback(t, "templateApply", COMBO_TEMPLATE_FALLBACK.apply)}
+                    <p
+                      className={`text-[10px] mt-1.5 font-medium ${template.isFeatured ? "text-emerald-500" : "text-primary"}`}
+                    >
+                      {getI18nOrFallback(t, "templateApply", COMBO_TEMPLATE_FALLBACK.apply)} →
                     </p>
                   </button>
                 ))}
@@ -1969,6 +2073,7 @@ function ComboFormModal({ isOpen, combo, onClose, onSave, activeProviders }) {
         modelAliases={modelAliases}
         title={t("addModelToCombo")}
         selectedModel={null}
+        addedModelValues={models.map((m) => m.model)}
       />
     </>
   );

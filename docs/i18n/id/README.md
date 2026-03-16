@@ -1059,6 +1059,23 @@ Models:
   cx/gpt-5.1-codex-max
 ```
 
+#### Manajemen Limit Akun Codex (5h + Mingguan)
+
+Setiap akun Codex sekarang punya toggle kebijakan di `Dashboard -> Providers`:
+
+- `5h` (ON/OFF): menerapkan kebijakan ambang untuk jendela 5 jam.
+- `Weekly` (ON/OFF): menerapkan kebijakan ambang untuk jendela mingguan.
+- Perilaku ambang: saat jendela yang aktif mencapai >=90% penggunaan, akun tersebut di-skip.
+- Perilaku rotasi: OmniRoute otomatis merutekan ke akun Codex berikutnya yang masih eligible.
+- Perilaku reset: saat waktu `resetAt` provider sudah lewat, akun otomatis bisa dipakai lagi.
+
+Skenario:
+
+- `5h ON` + `Weekly ON`: akun di-skip jika salah satu jendela mencapai ambang.
+- `5h OFF` + `Weekly ON`: hanya penggunaan mingguan yang bisa memblokir akun.
+- `5h ON` + `Weekly OFF`: hanya penggunaan 5 jam yang bisa memblokir akun.
+- `resetAt` sudah lewat: akun otomatis masuk rotasi lagi (tanpa enable manual).
+
 ### Gemini CLI (GRATIS 180K/bulan!)
 
 ```bash
@@ -1555,15 +1572,9 @@ gh release create v1.0.6 --title "v1.0.6" --generate-notes
 
 ## 📊 Sejarah Bintang
 
-<a href="https://star-history.com/#diegosouzapw/OmniRoute&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=diegosouzapw/OmniRoute&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=diegosouzapw/OmniRoute&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=diegosouzapw/OmniRoute&type=Date" />
- </picture>
-</a>
+## Stargazers over time
 
----
+## [![Stargazers over time](https://starchart.cc/diegosouzapw/OmniRoute.svg?variant=adaptive)](https://starchart.cc/diegosouzapw/OmniRoute)
 
 ## 🙏 Ucapan Terima Kasih
 

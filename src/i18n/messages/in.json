@@ -138,7 +138,11 @@
     "media": "Media",
     "mediaDescription": "Generate images, videos, and music",
     "themes": "Themes",
-    "themesDescription": "Choose a color theme for the whole dashboard panel"
+    "themesDescription": "Choose a color theme for the whole dashboard panel",
+    "mcp": "MCP",
+    "mcpDescription": "Model Context Protocol server management and tools",
+    "a2a": "A2A",
+    "a2aDescription": "Agent-to-Agent protocol tasks and observability"
   },
   "home": {
     "quickStart": "त्वरित शुरुआत",
@@ -456,7 +460,9 @@
       "cline": "क्लाइन एआई कोडिंग सहायक सीएलआई",
       "kilo": "किलो कोड एआई असिस्टेंट सीएलआई",
       "cursor": "कर्सर एआई कोड संपादक",
-      "continue": "एआई असिस्टेंट जारी रखें"
+      "continue": "एआई असिस्टेंट जारी रखें",
+      "opencode": "OpenCode AI coding agent (Terminal)",
+      "kiro": "Amazon Kiro — AI-powered IDE"
     },
     "guides": {
       "cursor": {
@@ -503,6 +509,42 @@
           "4": {
             "title": "मॉडल कॉन्फ़िगरेशन जोड़ें",
             "desc": "अपने मॉडल सरणी में निम्नलिखित कॉन्फ़िगरेशन जोड़ें:"
+          }
+        }
+      },
+      "opencode": {
+        "steps": {
+          "1": {
+            "title": "Install OpenCode",
+            "desc": "Install via npm: npm install -g opencode-ai"
+          },
+          "2": {
+            "title": "API Key"
+          },
+          "3": {
+            "title": "Set Base URL",
+            "desc": "opencode config set baseUrl {{baseUrl}}"
+          },
+          "4": {
+            "title": "Select Model"
+          }
+        }
+      },
+      "kiro": {
+        "steps": {
+          "1": {
+            "title": "Open Kiro Settings",
+            "desc": "Go to Settings → AI Provider"
+          },
+          "2": {
+            "title": "Base URL",
+            "desc": "Paste your OmniRoute endpoint URL"
+          },
+          "3": {
+            "title": "API Key"
+          },
+          "4": {
+            "title": "Select Model"
           }
         }
       }
@@ -562,6 +604,8 @@
     "randomDesc": "समान यादृच्छिक चयन, फिर शेष मॉडलों पर वापस लौटना",
     "leastUsedDesc": "समय के साथ लोड को संतुलित करते हुए, सबसे कम अनुरोधों वाला मॉडल चुनता है",
     "costOptimizedDesc": "मूल्य निर्धारण के आधार पर सबसे पहले सबसे सस्ते मॉडल पर रूट करें",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each model once before reshuffling",
     "models": "मॉडल",
     "autoBalance": "स्वत: संतुलन",
     "advancedSettings": "उन्नत सेटिंग्स",
@@ -704,7 +748,9 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       }
-    }
+    },
+    "templateFreeStack": "Free Stack ($0)",
+    "templateFreeStackDesc": "Round-robin across all free providers: Kiro (Claude), iFlow (5 models), Qwen (4 models), Gemini CLI. Zero cost, never stops coding."
   },
   "costs": {
     "title": "लागत",
@@ -816,7 +862,9 @@
     "a2aQuickStartTitle": "A2A Quick Start",
     "a2aQuickStartStep1": "Discover the agent card at `/.well-known/agent.json`.",
     "a2aQuickStartStep2": "Send JSON-RPC requests to `POST /a2a` using `message/send` or `message/stream`.",
-    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`."
+    "a2aQuickStartStep3": "Track and control tasks using `tasks/get` and `tasks/cancel`.",
+    "completionsLegacy": "Completions (Legacy)",
+    "completionsLegacyDesc": "Legacy OpenAI text completions — accepts both prompt string and messages array format"
   },
   "mcpDashboard": {
     "loading": "Loading MCP dashboard...",
@@ -1332,13 +1380,16 @@
     "email": "ईमेल",
     "healthCheckMinutes": "स्वास्थ्य जांच (न्यूनतम)",
     "healthCheckHint": "प्रोएक्टिव टोकन ताज़ा अंतराल। 0 = अक्षम.",
+    "groupLabel": "Environment",
+    "groupPlaceholder": "e.g. eKaizen, Personal",
     "failedTestConnection": "कनेक्शन का परीक्षण करने में विफल",
     "failed": "असफल",
     "leaveBlankKeepCurrentApiKey": "वर्तमान एपीआई कुंजी रखने के लिए खाली छोड़ दें।",
     "editCompatibleTitle": "संपादित करें {type} संगत",
     "compatibleBaseUrlHint": "अपने {type}-संगत API के लिए आधार URL (/v1 पर समाप्त) का उपयोग करें।",
     "apiKeyForCheck": "एपीआई कुंजी (चेक के लिए)",
-    "compatibleProdPlaceholder": "{type} संगत (उत्पाद)"
+    "compatibleProdPlaceholder": "{type} संगत (उत्पाद)",
+    "providerTestTimeout": "Provider test timed out — too many connections to test at once"
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -1496,6 +1547,8 @@
     "leastUsedDesc": "कम से कम हाल ही में उपयोग किया गया खाता चुनें",
     "costOpt": "लागत विकल्प",
     "costOptDesc": "सबसे सस्ते उपलब्ध खाते को प्राथमिकता दें",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each account once before reshuffling",
     "stickyLimit": "चिपचिपी सीमा",
     "stickyLimitDesc": "स्विच करने से पहले प्रति खाता कॉल",
     "modelAliases": "मॉडल उपनाम",
@@ -1734,7 +1787,12 @@
     "customPricingNote": "आप विशिष्ट मॉडलों के लिए डिफ़ॉल्ट मूल्य निर्धारण को ओवरराइड कर सकते हैं। कस्टम ओवरराइड्स को स्वतः-पता लगाए गए मूल्य-निर्धारण पर प्राथमिकता दी जाती है।",
     "editPricing": "मूल्य निर्धारण संपादित करें",
     "viewFullDetails": "पूर्ण विवरण देखें",
-    "themeCoral": "कोरल"
+    "themeCoral": "कोरल",
+    "cliFingerprint": "CLI Fingerprint Matching",
+    "cliFingerprintDesc": "Match native CLI binary signatures when proxying requests. Reorders headers and body fields to look identical to the official CLI tools. Your proxy IP is preserved.",
+    "cliFingerprintEnabled": "{count} provider(s) with CLI fingerprint active",
+    "enableFingerprintTitle": "Enable fingerprint for {provider}",
+    "disableFingerprintTitle": "Disable fingerprint for {provider}"
   },
   "translator": {
     "title": "अनुवादक",
@@ -2020,6 +2078,9 @@
     "rawPlanWithValue": "कच्ची योजना: {plan}",
     "noPlanFromProvider": "प्रदाता की ओर से कोई योजना नहीं",
     "noQuotaData": "कोई कोटा डेटा नहीं",
+    "ungrouped": "Ungrouped",
+    "viewFlat": "Flat",
+    "viewByEnvironment": "By Environment",
     "noQuotaDataAvailable": "कोई कोटा डेटा उपलब्ध नहीं है",
     "noAccountsForTierFilter": "टियर फ़िल्टर के लिए कोई खाता नहीं मिला",
     "tierAll": "सब",
@@ -2419,5 +2480,45 @@
     "featureWebhooks": "Webhook configuration and event subscriptions",
     "featureSwagger": "OpenAPI / Swagger spec auto-generation",
     "featureAuth": "API key and OAuth scope management per endpoint"
+  },
+  "agents": {
+    "title": "CLI Agents",
+    "description": "Discover installed CLI agents on your system. Add custom agents for auto-detection.",
+    "refresh": "Refresh",
+    "installed": "Installed",
+    "notFound": "Not Found",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "remove": "Remove",
+    "addCustomAgent": "Add Custom Agent",
+    "addCustomAgentDesc": "Register any CLI tool for detection. It will be scanned automatically on refresh.",
+    "agentName": "Agent Name",
+    "binaryName": "Binary Name",
+    "versionCommand": "Version Command",
+    "spawnArgs": "Spawn Args",
+    "addAgent": "Add Agent"
+  },
+  "autoCombo": {
+    "title": "Auto-Combo Engine",
+    "statusNormal": "Normal",
+    "statusIncident": "Incident Mode",
+    "modePack": "Mode Pack",
+    "providerScores": "Provider Scores",
+    "noAutoCombo": "No auto-combo configured.",
+    "excludedProviders": "Excluded Providers",
+    "noExclusions": "No providers currently excluded.",
+    "factorQuota": "Quota",
+    "factorHealth": "Health",
+    "factorCost": "Cost",
+    "factorLatency": "Latency",
+    "factorTaskFit": "Task Fit",
+    "factorStability": "Stability",
+    "factorTierPriority": "Tier Priority",
+    "factorTierPriorityDesc": "Prefers accounts with higher quota tiers (Ultra/Pro over Free)",
+    "scoreFactorBreakdown": "Scoring Factors",
+    "modePackShipFast": "Ship Fast",
+    "modePackCostSaver": "Cost Saver",
+    "modePackQualityFirst": "Quality First",
+    "modePackOfflineFriendly": "Offline Friendly"
   }
 }

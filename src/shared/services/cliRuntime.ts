@@ -41,7 +41,7 @@ const CLI_TOOLS: Record<string, any> = {
     envBinKey: "CLI_OPENCLAW_BIN",
     requiresBinary: true,
     // openclaw CLI may take >4s on cold start in containers.
-    healthcheckTimeoutMs: 12000,
+    healthcheckTimeoutMs: 15000,
     paths: {
       settings: ".openclaw/openclaw.json",
     },
@@ -51,7 +51,7 @@ const CLI_TOOLS: Record<string, any> = {
     envBinKey: "CLI_CURSOR_BIN",
     requiresBinary: true,
     // Cursor startup can be slower on first run in containerized host-mount mode.
-    healthcheckTimeoutMs: 12000,
+    healthcheckTimeoutMs: 15000,
     paths: {
       config: ".cursor/cli-config.json",
       auth: ".config/cursor/auth.json",
@@ -73,7 +73,10 @@ const CLI_TOOLS: Record<string, any> = {
     defaultCommand: "kilocode",
     envBinKey: "CLI_KILO_BIN",
     requiresBinary: true,
-    healthcheckTimeoutMs: 4000,
+    // kilocode renders an ASCII logo banner on startup which can take >4s
+    // on cold-start or low-resource environments (VPS, CI). Increase timeout
+    // to avoid false healthcheck_failed results.
+    healthcheckTimeoutMs: 15000,
     paths: {
       auth: ".local/share/kilo/auth.json",
     },
@@ -82,8 +85,20 @@ const CLI_TOOLS: Record<string, any> = {
     defaultCommand: null,
     envBinKey: "CLI_CONTINUE_BIN",
     requiresBinary: false,
+    // opencode and continue may take up to 15s on first run / cold start on VPS
+    healthcheckTimeoutMs: 15000,
     paths: {
       settings: ".continue/config.json",
+    },
+  },
+  opencode: {
+    defaultCommand: "opencode",
+    envBinKey: "CLI_OPENCODE_BIN",
+    requiresBinary: true,
+    // opencode takes several seconds on cold start environments
+    healthcheckTimeoutMs: 15000,
+    paths: {
+      config: ".config/opencode/config.toml",
     },
   },
 };
@@ -95,7 +110,11 @@ const parseBoolean = (value: unknown, defaultValue = true) => {
   return !FALSE_VALUES.has(String(value).trim().toLowerCase());
 };
 
-const runProcess = (command: string, args: string[], { env, timeoutMs = 3000 }: { env?: Record<string, string | undefined>; timeoutMs?: number } = {}): Promise<any> =>
+const runProcess = (
+  command: string,
+  args: string[],
+  { env, timeoutMs = 3000 }: { env?: Record<string, string | undefined>; timeoutMs?: number } = {}
+): Promise<any> =>
   new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
@@ -179,7 +198,26 @@ const resolveToolCommands = (toolId: string): string[] => {
   return tool.defaultCommand ? [tool.defaultCommand] : [];
 };
 
+/**
+ * T12: Validate a CLI executable path to prevent shell injection.
+ * Enforces: absolute path, no dangerous shell metacharacters, must exist and be a file.
+ * Inspired by Antigravity Manager commit 96732c2 (Mar 11, 2026).
+ */
+const DANGEROUS_PATH_CHARS = ["&", "|", ";", "<", ">", "(", ")", "`", "$", "^", "%", "!"];
+
+const isSafePath = (execPath: string): boolean => {
+  if (!execPath || !path.isAbsolute(execPath)) return false;
+  if (DANGEROUS_PATH_CHARS.some((c) => execPath.includes(c))) return false;
+  // Allow path.sep and path.delimiter — no further character filtering needed
+  return true;
+};
+
 const checkExplicitPath = async (commandPath: string) => {
+  // Reject paths that look like injection attempts
+  if (!isSafePath(commandPath)) {
+    return { installed: false, commandPath: null, reason: "unsafe_path" };
+  }
+
   try {
     await fs.access(commandPath, fs.constants.F_OK);
   } catch {
@@ -231,7 +269,10 @@ const locateCommand = async (command: string, env: Record<string, string | undef
   return { installed: !!first, commandPath: first, reason: first ? null : "not_found" };
 };
 
-const locateCommandCandidate = async (commands: string[], env: Record<string, string | undefined>) => {
+const locateCommandCandidate = async (
+  commands: string[],
+  env: Record<string, string | undefined>
+) => {
   if (!Array.isArray(commands) || commands.length === 0) {
     return { command: null, installed: false, commandPath: null, reason: "missing_command" };
   }
@@ -246,7 +287,11 @@ const locateCommandCandidate = async (commands: string[], env: Record<string, st
   return { command: commands[0], installed: false, commandPath: null, reason: "not_found" };
 };
 
-const checkRunnable = async (commandPath: string, env: Record<string, string | undefined>, timeoutMs = 4000) => {
+const checkRunnable = async (
+  commandPath: string,
+  env: Record<string, string | undefined>,
+  timeoutMs = 4000
+) => {
   for (const args of [["--version"], ["-v"]]) {
     const result = await runProcess(commandPath, args, { env, timeoutMs });
     if (result.ok) {
@@ -272,7 +317,10 @@ export const getCliConfigPaths = (toolId: string) => {
   if (!tool) return null;
   const home = getCliConfigHome();
   return Object.fromEntries(
-    Object.entries(tool.paths).map(([key, relativePath]) => [key, path.join(home, relativePath as string)])
+    Object.entries(tool.paths).map(([key, relativePath]) => [
+      key,
+      path.join(home, relativePath as string),
+    ])
   );
 };
 

@@ -138,7 +138,11 @@
     "media": "Média",
     "mediaDescription": "Készítsen képeket, videókat és zenét",
     "themes": "Témák",
-    "themesDescription": "Válasszon színtémát az egész irányítópult panelhez"
+    "themesDescription": "Válasszon színtémát az egész irányítópult panelhez",
+    "mcp": "MCP",
+    "mcpDescription": "Model Context Protocol server management and tools",
+    "a2a": "A2A",
+    "a2aDescription": "Agent-to-Agent protocol tasks and observability"
   },
   "home": {
     "quickStart": "Gyors kezdés",
@@ -456,7 +460,9 @@
       "cline": "Cline AI Coding Assistant CLI",
       "kilo": "Kilo Code AI Assistant CLI",
       "cursor": "Kurzor AI kódszerkesztő",
-      "continue": "Az AI-asszisztens folytatása"
+      "continue": "Az AI-asszisztens folytatása",
+      "opencode": "OpenCode AI coding agent (Terminal)",
+      "kiro": "Amazon Kiro — AI-powered IDE"
     },
     "guides": {
       "cursor": {
@@ -503,6 +509,42 @@
           "4": {
             "title": "Add Model Config",
             "desc": "Adja hozzá a következő konfigurációt a modellek tömbjéhez:"
+          }
+        }
+      },
+      "opencode": {
+        "steps": {
+          "1": {
+            "title": "Install OpenCode",
+            "desc": "Install via npm: npm install -g opencode-ai"
+          },
+          "2": {
+            "title": "API Key"
+          },
+          "3": {
+            "title": "Set Base URL",
+            "desc": "opencode config set baseUrl {{baseUrl}}"
+          },
+          "4": {
+            "title": "Select Model"
+          }
+        }
+      },
+      "kiro": {
+        "steps": {
+          "1": {
+            "title": "Open Kiro Settings",
+            "desc": "Go to Settings → AI Provider"
+          },
+          "2": {
+            "title": "Base URL",
+            "desc": "Paste your OmniRoute endpoint URL"
+          },
+          "3": {
+            "title": "API Key"
+          },
+          "4": {
+            "title": "Select Model"
           }
         }
       }
@@ -562,6 +604,8 @@
     "randomDesc": "Egységes véletlenszerű kiválasztás, majd visszaállás a többi modellhez",
     "leastUsedDesc": "A legkevesebb kéréssel rendelkező modellt választja, idővel kiegyensúlyozva a terhelést",
     "costOptimizedDesc": "Először a legolcsóbb modellhez vezet az árak alapján",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each model once before reshuffling",
     "models": "Modellek",
     "autoBalance": "Automatikus egyensúly",
     "advancedSettings": "Speciális beállítások",
@@ -704,7 +748,9 @@
         "tip2": "Keep a quality fallback for hard prompts.",
         "tip3": "Use for batch/background jobs where cost is the main KPI."
       }
-    }
+    },
+    "templateFreeStack": "Free Stack ($0)",
+    "templateFreeStackDesc": "Round-robin across all free providers: Kiro (Claude), iFlow (5 models), Qwen (4 models), Gemini CLI. Zero cost, never stops coding."
   },
   "costs": {
     "title": "Költségek",
@@ -816,7 +862,9 @@
     "a2aQuickStartTitle": "A2A Quick Start",
     "a2aQuickStartStep1": "Discover the agent card at `/.well-known/agent.json`.",
     "a2aQuickStartStep2": "Send JSON-RPC requests to `POST /a2a` using `message/send` or `message/stream`.",
-    "a2aQuickStartStep3": "Kövesse nyomon és vezérelje a feladatokat a `tasks/get` és `tasks/cancel` használatával."
+    "a2aQuickStartStep3": "Kövesse nyomon és vezérelje a feladatokat a `tasks/get` és `tasks/cancel` használatával.",
+    "completionsLegacy": "Completions (Legacy)",
+    "completionsLegacyDesc": "Legacy OpenAI text completions — accepts both prompt string and messages array format"
   },
   "mcpDashboard": {
     "loading": "Loading MCP dashboard...",
@@ -1332,13 +1380,16 @@
     "email": "E-mail",
     "healthCheckMinutes": "állapotfelmérés (perc)",
     "healthCheckHint": "Proaktív token frissítési időköz. 0 = letiltva.",
+    "groupLabel": "Environment",
+    "groupPlaceholder": "e.g. eKaizen, Personal",
     "failedTestConnection": "Nem sikerült tesztelni a kapcsolatot",
     "failed": "Sikertelen",
     "leaveBlankKeepCurrentApiKey": "Hagyja üresen az aktuális API-kulcs megtartásához.",
     "editCompatibleTitle": "Szerkesztés {type} Kompatibilis",
     "compatibleBaseUrlHint": "Használja a {type}-kompatibilis API alap URL-jét (a /v1 végződésű).",
     "apiKeyForCheck": "API-kulcs (ellenőrzéshez)",
-    "compatibleProdPlaceholder": "{type} Kompatibilis (termék)"
+    "compatibleProdPlaceholder": "{type} Kompatibilis (termék)",
+    "providerTestTimeout": "Provider test timed out — too many connections to test at once"
   },
   "settings": {
     "title": "Beállítások elemre",
@@ -1496,6 +1547,8 @@
     "leastUsedDesc": "Válassza ki a legutóbb használt fiókot",
     "costOpt": "Költségopt",
     "costOptDesc": "A legolcsóbb elérhető fiók előnyben részesítése",
+    "strictRandom": "Strict Random",
+    "strictRandomDesc": "Shuffle deck — uses each account once before reshuffling",
     "stickyLimit": "Ragadós határ",
     "stickyLimitDesc": "Hívások fiókonként váltás előtt",
     "modelAliases": "Modell álnevek",
@@ -1734,7 +1787,12 @@
     "customPricingNote": "Egyes modelleknél felülbírálhatja az alapértelmezett árazást. Az egyéni felülbírálások elsőbbséget élveznek az automatikusan észlelt árképzéssel szemben.",
     "editPricing": "Árak szerkesztése",
     "viewFullDetails": "Teljes részletek megtekintése",
-    "themeCoral": "Korall"
+    "themeCoral": "Korall",
+    "cliFingerprint": "CLI Fingerprint Matching",
+    "cliFingerprintDesc": "Match native CLI binary signatures when proxying requests. Reorders headers and body fields to look identical to the official CLI tools. Your proxy IP is preserved.",
+    "cliFingerprintEnabled": "{count} provider(s) with CLI fingerprint active",
+    "enableFingerprintTitle": "Enable fingerprint for {provider}",
+    "disableFingerprintTitle": "Disable fingerprint for {provider}"
   },
   "translator": {
     "title": "Fordító",
@@ -2020,6 +2078,9 @@
     "rawPlanWithValue": "Nyers terv: {plan}",
     "noPlanFromProvider": "Nincs terv a szolgáltatótól",
     "noQuotaData": "Nincsenek kvótaadatok",
+    "ungrouped": "Ungrouped",
+    "viewFlat": "Flat",
+    "viewByEnvironment": "By Environment",
     "noQuotaDataAvailable": "Nem állnak rendelkezésre kvótaadatok",
     "noAccountsForTierFilter": "Nem található fiók a rétegszűrőhöz",
     "tierAll": "Mind",
@@ -2419,5 +2480,45 @@
     "featureWebhooks": "Webhook configuration and event subscriptions",
     "featureSwagger": "OpenAPI / Swagger spec auto-generation",
     "featureAuth": "API key and OAuth scope management per endpoint"
+  },
+  "agents": {
+    "title": "CLI Agents",
+    "description": "Discover installed CLI agents on your system. Add custom agents for auto-detection.",
+    "refresh": "Refresh",
+    "installed": "Installed",
+    "notFound": "Not Found",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "remove": "Remove",
+    "addCustomAgent": "Add Custom Agent",
+    "addCustomAgentDesc": "Register any CLI tool for detection. It will be scanned automatically on refresh.",
+    "agentName": "Agent Name",
+    "binaryName": "Binary Name",
+    "versionCommand": "Version Command",
+    "spawnArgs": "Spawn Args",
+    "addAgent": "Add Agent"
+  },
+  "autoCombo": {
+    "title": "Auto-Combo Engine",
+    "statusNormal": "Normal",
+    "statusIncident": "Incident Mode",
+    "modePack": "Mode Pack",
+    "providerScores": "Provider Scores",
+    "noAutoCombo": "No auto-combo configured.",
+    "excludedProviders": "Excluded Providers",
+    "noExclusions": "No providers currently excluded.",
+    "factorQuota": "Quota",
+    "factorHealth": "Health",
+    "factorCost": "Cost",
+    "factorLatency": "Latency",
+    "factorTaskFit": "Task Fit",
+    "factorStability": "Stability",
+    "factorTierPriority": "Tier Priority",
+    "factorTierPriorityDesc": "Prefers accounts with higher quota tiers (Ultra/Pro over Free)",
+    "scoreFactorBreakdown": "Scoring Factors",
+    "modePackShipFast": "Ship Fast",
+    "modePackCostSaver": "Cost Saver",
+    "modePackQualityFirst": "Quality First",
+    "modePackOfflineFriendly": "Offline Friendly"
   }
 }
