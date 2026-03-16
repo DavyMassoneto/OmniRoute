@@ -101,18 +101,19 @@ jobs:
             omniroute:fork-latest
 
           echo "=== Waiting for health check ==="
-          for i in $(seq 1 12); do
-            if curl -sf http://localhost:80/api/settings > /dev/null 2>&1; then
+          sleep 5
+          for i in $(seq 1 15); do
+            if docker exec omniroute node healthcheck.mjs 2>/dev/null; then
               echo "Health check passed on attempt $i"
               docker ps --filter name=omniroute --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
               exit 0
             fi
-            echo "Attempt $i/12 - waiting 5s..."
+            echo "Attempt $i/15 - waiting 5s..."
             sleep 5
           done
 
-          echo "Health check failed after 60s"
-          docker logs omniroute --tail 30
+          echo "Health check failed after 80s"
+          docker logs omniroute --tail 50
           exit 1
           DEPLOY_SCRIPT
 
