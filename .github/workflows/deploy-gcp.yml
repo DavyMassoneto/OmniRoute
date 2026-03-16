@@ -100,27 +100,27 @@ jobs:
             -e INITIAL_PASSWORD=123456 \
             omniroute:fork-latest
 
-          echo "=== Waiting for container to be healthy ==="
-          sleep 10
+          echo "=== Waiting for app to respond ==="
+          sleep 15
           for i in $(seq 1 18); do
-            STATUS=$(docker inspect --format='{{.State.Status}}' omniroute 2>/dev/null || echo "missing")
-            HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' omniroute 2>/dev/null || echo "unknown")
-            echo "Attempt $i/18 — status=$STATUS health=$HEALTH"
-            if [ "$STATUS" != "running" ]; then
-              echo "Container not running!"
-              docker logs omniroute --tail 50
-              exit 1
-            fi
-            if [ "$HEALTH" = "healthy" ]; then
-              echo "Container is healthy!"
+            echo "--- Attempt $i/18 ---"
+            # Run healthcheck inside container with full error output
+            if docker exec omniroute node healthcheck.mjs 2>&1; then
+              echo "Health check passed!"
               docker ps --filter name=omniroute --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
               exit 0
             fi
+            echo "Not ready yet, waiting 10s..."
             sleep 10
           done
 
-          echo "Container running but health check never passed (final health=$HEALTH)"
-          docker logs omniroute --tail 50
+          echo "=== Health check failed after 180s ==="
+          echo "--- Container status ---"
+          docker inspect --format='status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' omniroute 2>/dev/null || true
+          echo "--- Last health check logs ---"
+          docker inspect --format='{{if .State.Health}}{{range .State.Health.Log}}{{.Output}}{{end}}{{end}}' omniroute 2>/dev/null || true
+          echo "--- Container logs ---"
+          docker logs omniroute --tail 80
           exit 1
           DEPLOY_SCRIPT
 

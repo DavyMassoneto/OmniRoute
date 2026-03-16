@@ -12,4 +12,7 @@ fetch(`http://127.0.0.1:${port}/api/monitoring/health`)
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     process.exit(0);
   })
-  .catch(() => process.exit(1));
+  .catch((err) => {
+    process.stderr.write(`[healthcheck] FAIL: ${err.message || err}\n`);
+    process.exit(1);
+  });
