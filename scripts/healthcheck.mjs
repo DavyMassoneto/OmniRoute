@@ -2,7 +2,7 @@
 
 /**
  * Docker healthcheck script for OmniRoute.
- * Checks the /api/monitoring/health endpoint on the dashboard port.
+ * Checks the /api/monitoring/health endpoint (public, no auth required).
  * Used by Dockerfile and docker-compose files.
  */
 const port = process.env.DASHBOARD_PORT || process.env.PORT || "20128";
