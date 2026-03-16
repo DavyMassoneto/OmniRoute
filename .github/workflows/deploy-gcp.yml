@@ -100,19 +100,26 @@ jobs:
             -e INITIAL_PASSWORD=123456 \
             omniroute:fork-latest
 
-          echo "=== Waiting for health check ==="
-          sleep 5
-          for i in $(seq 1 15); do
-            if docker exec omniroute node healthcheck.mjs 2>/dev/null; then
-              echo "Health check passed on attempt $i"
+          echo "=== Waiting for container to be healthy ==="
+          sleep 10
+          for i in $(seq 1 12); do
+            STATUS=$(docker inspect --format='{{.State.Status}}' omniroute 2>/dev/null || echo "missing")
+            HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' omniroute 2>/dev/null || echo "unknown")
+            echo "Attempt $i/12 — status=$STATUS health=$HEALTH"
+            if [ "$STATUS" != "running" ]; then
+              echo "Container not running!"
+              docker logs omniroute --tail 50
+              exit 1
+            fi
+            if [ "$HEALTH" = "healthy" ]; then
+              echo "Container is healthy!"
               docker ps --filter name=omniroute --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
               exit 0
             fi
-            echo "Attempt $i/15 - waiting 5s..."
-            sleep 5
+            sleep 10
           done
 
-          echo "Health check failed after 80s"
+          echo "Container running but health check never passed (final health=$HEALTH)"
           docker logs omniroute --tail 50
           exit 1
           DEPLOY_SCRIPT
