@@ -104,10 +104,9 @@ jobs:
           sleep 15
           for i in $(seq 1 18); do
             echo "--- Attempt $i/18 ---"
-            # Run healthcheck inside container with full error output
             if docker exec omniroute node healthcheck.mjs 2>&1; then
               echo "Health check passed!"
-              docker ps --filter name=omniroute --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+              docker ps --filter name=omniroute
               exit 0
             fi
             echo "Not ready yet, waiting 10s..."
@@ -115,11 +114,7 @@ jobs:
           done
 
           echo "=== Health check failed after 180s ==="
-          echo "--- Container status ---"
-          docker inspect --format='status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' omniroute 2>/dev/null || true
-          echo "--- Last health check logs ---"
-          docker inspect --format='{{if .State.Health}}{{range .State.Health.Log}}{{.Output}}{{end}}{{end}}' omniroute 2>/dev/null || true
-          echo "--- Container logs ---"
+          docker inspect --format='status={{.State.Status}}' omniroute 2>/dev/null || true
           docker logs omniroute --tail 80
           exit 1
           DEPLOY_SCRIPT
