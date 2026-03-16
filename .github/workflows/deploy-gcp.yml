@@ -106,7 +106,6 @@ jobs:
             echo "--- Attempt $i/18 ---"
             if docker exec omniroute node healthcheck.mjs 2>&1; then
               echo "Health check passed!"
-              docker ps --filter name=omniroute
               exit 0
             fi
             echo "Not ready yet, waiting 10s..."
@@ -114,7 +113,6 @@ jobs:
           done
 
           echo "=== Health check failed after 180s ==="
-          docker inspect --format='status={{.State.Status}}' omniroute 2>/dev/null || true
           docker logs omniroute --tail 80
           exit 1
           DEPLOY_SCRIPT
