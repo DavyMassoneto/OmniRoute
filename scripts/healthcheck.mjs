@@ -10,5 +10,6 @@ const port = process.env.DASHBOARD_PORT || process.env.PORT || "20128";
 fetch(`http://127.0.0.1:${port}/api/monitoring/health`)
   .then((r) => {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    process.exit(0);
   })
   .catch(() => process.exit(1));

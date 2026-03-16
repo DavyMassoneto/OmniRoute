@@ -102,10 +102,10 @@ jobs:
 
           echo "=== Waiting for container to be healthy ==="
           sleep 10
-          for i in $(seq 1 12); do
+          for i in $(seq 1 18); do
             STATUS=$(docker inspect --format='{{.State.Status}}' omniroute 2>/dev/null || echo "missing")
             HEALTH=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' omniroute 2>/dev/null || echo "unknown")
-            echo "Attempt $i/12 — status=$STATUS health=$HEALTH"
+            echo "Attempt $i/18 — status=$STATUS health=$HEALTH"
             if [ "$STATUS" != "running" ]; then
               echo "Container not running!"
               docker logs omniroute --tail 50
