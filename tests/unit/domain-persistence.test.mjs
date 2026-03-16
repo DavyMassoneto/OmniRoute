@@ -19,7 +19,12 @@ beforeEach(() => {
 afterEach(() => {
   process.env.DATA_DIR = originalEnv;
   if (tmpDir && fs.existsSync(tmpDir)) {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    // maxRetries handles transient EBUSY from SQLite WAL locks on Windows
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    } catch {
+      /* best-effort cleanup */
+    }
   }
 });
 

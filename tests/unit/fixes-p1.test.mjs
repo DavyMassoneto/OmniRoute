@@ -38,14 +38,51 @@ async function withEnv(name, value, fn) {
 }
 
 async function resetStorage() {
+  // On Windows, WAL mode keeps file handles on -shm/-wal.
+  // Checkpoint and switch to DELETE mode before closing to release them.
+  try {
+    const db = core.getDbInstance();
+    db.pragma("wal_checkpoint(TRUNCATE)");
+    db.pragma("journal_mode = DELETE");
+  } catch {
+    /* DB may not be open */
+  }
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  // On Windows, SQLite native handles linger after close().
+  // Best-effort cleanup — if rmSync fails, just empty the directory.
+  try {
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+  } catch {
+    // If we can't delete the dir, at least delete non-locked files
+    try {
+      for (const f of fs.readdirSync(TEST_DATA_DIR)) {
+        try {
+          fs.rmSync(path.join(TEST_DATA_DIR, f), { force: true, recursive: true });
+        } catch {
+          /* skip locked files */
+        }
+      }
+    } catch {
+      /* dir may not exist */
+    }
+  }
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
 }
 
 test.after(async () => {
+  try {
+    const db = core.getDbInstance();
+    db.pragma("wal_checkpoint(TRUNCATE)");
+    db.pragma("journal_mode = DELETE");
+  } catch {
+    /* DB may not be open */
+  }
   core.resetDbInstance();
-  fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  try {
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  } catch {
+    /* best-effort cleanup */
+  }
 });
 
 test("token refresh dedupe key avoids collision for same-prefix tokens", async () => {
@@ -101,6 +138,12 @@ test("restoreDbBackup clears stale sqlite sidecars before reopen", async () => {
   fs.mkdirSync(core.DB_BACKUPS_DIR, { recursive: true });
   await db.backup(backupPath);
 
+  // Close the DB before writing stale sidecar markers.
+  // On Windows, WAL mode keeps file handles on -shm/-wal (EBUSY).
+  db.pragma("wal_checkpoint(TRUNCATE)");
+  db.pragma("journal_mode = DELETE");
+  core.resetDbInstance();
+
   fs.writeFileSync(`${core.SQLITE_FILE}-wal`, "STALE-WAL-MARKER");
   fs.writeFileSync(`${core.SQLITE_FILE}-shm`, "STALE-SHM-MARKER");
   fs.writeFileSync(`${core.SQLITE_FILE}-journal`, "STALE-JOURNAL-MARKER");
@@ -149,6 +192,8 @@ test('provider connection migration adds "group" column for existing databases',
 
   const Database = (await import("better-sqlite3")).default;
   const db = new Database(sqlitePath);
+  // Drop any existing table (resetStorage may fail to delete the file on Windows due to EBUSY)
+  db.exec("DROP TABLE IF EXISTS provider_connections");
   db.exec(`
     CREATE TABLE provider_connections (
       id TEXT PRIMARY KEY,

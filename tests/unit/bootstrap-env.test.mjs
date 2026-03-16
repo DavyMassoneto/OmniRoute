@@ -19,17 +19,27 @@ function withTempEnv(fn) {
 
   delete process.env.DATA_DIR;
   delete process.env.XDG_CONFIG_HOME;
-  delete process.env.APPDATA;
   delete process.env.JWT_SECRET;
   delete process.env.STORAGE_ENCRYPTION_KEY;
   delete process.env.STORAGE_ENCRYPTION_KEY_VERSION;
   delete process.env.API_KEY_SECRET;
   delete process.env.INITIAL_PASSWORD;
   process.env.HOME = tempHome;
+
+  // On Windows, resolveDataDir uses APPDATA (not HOME/.omniroute).
+  // Point APPDATA at tempHome so the data dir resolves to tempHome/omniroute.
+  const isWin = process.platform === "win32";
+  if (isWin) {
+    process.env.APPDATA = tempHome;
+  } else {
+    delete process.env.APPDATA;
+  }
+
+  const dataDir = isWin ? path.join(tempHome, "omniroute") : path.join(tempHome, ".omniroute");
   process.chdir(tempCwd);
 
   try {
-    fn({ tempRoot, tempCwd, tempHome, dataDir: path.join(tempHome, ".omniroute") });
+    fn({ tempRoot, tempCwd, tempHome, dataDir });
   } finally {
     process.chdir(originalCwd);
     for (const key of Object.keys(process.env)) {

@@ -47,17 +47,18 @@ function buildLogger(): pino.Logger {
   const logLevel = (baseConfig.level as string) || "info";
   const transportConfig = getTransportCompatibleConfig();
 
-  // If file logging is enabled, set up dual transport (stdout + file)
+  // If file logging is enabled, set up dual output (stdout + file)
   if (logConfig.logToFile) {
     try {
       // Initialize log directory and rotation
       initLogRotation();
 
-      // Resolve to absolute path for pino worker threads
+      // Resolve to absolute path for file destination
       const absLogPath = resolve(logConfig.logFilePath);
 
       if (isDev) {
-        // Dev: pino-pretty → stdout, JSON → file
+        // Dev: pino-pretty → stdout via transport (worker thread OK in dev),
+        // JSON → file via transport
         return pino({
           ...transportConfig,
           transport: {
@@ -83,51 +84,23 @@ function buildLogger(): pino.Logger {
         });
       }
 
-      // Production: JSON → stdout + JSON → file
-      return pino({
-        ...transportConfig,
-        transport: {
-          targets: [
-            {
-              target: "pino/file",
-              options: { destination: 1 }, // stdout
-              level: logLevel,
-            },
-            {
-              target: "pino/file",
-              options: { destination: absLogPath, mkdir: true },
-              level: logLevel,
-            },
-          ],
-        },
-      });
+      // Production: use multistream with async SonicBoom destinations
+      // instead of pino.transport() which spawns worker threads that crash
+      // in Next.js standalone builds (bundled __dirname != node_modules)
+      const fileDestination = pino.destination({ dest: absLogPath, mkdir: true, sync: false });
+
+      return pino(
+        baseConfig,
+        pino.multistream([
+          { stream: process.stdout, level: logLevel as pino.Level },
+          { stream: fileDestination, level: logLevel as pino.Level },
+        ])
+      );
     } catch (err) {
-      // Log the actual error for diagnostics (issue #165)
       console.warn(
-        "[logger] Failed to set up file transport, attempting sync fallback...",
+        "[logger] Failed to set up file logging, falling back to console only",
         (err as Error)?.message || err
       );
-
-      // Fallback: use sync pino.destination() instead of worker-thread transport
-      // pino.transport() uses worker threads which can fail in Next.js production bundles
-      try {
-        const absLogPath = resolve(logConfig.logFilePath);
-        const fileDestination = pino.destination({ dest: absLogPath, mkdir: true, sync: true });
-
-        // Production fallback: JSON to both stdout and file via multistream
-        return pino(
-          baseConfig,
-          pino.multistream([
-            { stream: process.stdout, level: logLevel as pino.Level },
-            { stream: fileDestination, level: logLevel as pino.Level },
-          ])
-        );
-      } catch (fallbackErr) {
-        console.warn(
-          "[logger] Sync fallback also failed, falling back to console only",
-          (fallbackErr as Error)?.message || fallbackErr
-        );
-      }
     }
   }
 

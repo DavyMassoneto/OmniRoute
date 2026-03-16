@@ -14,6 +14,10 @@ const nextConfig = {
   output: "standalone",
   serverExternalPackages: [
     "better-sqlite3",
+    "pino",
+    "pino-pretty",
+    "thread-stream",
+    "sonic-boom",
     "zod",
     "child_process",
     "fs",
@@ -56,6 +60,9 @@ const nextConfig = {
         ...prevArr,
         ({ request }, callback) => {
           if (request === "better-sqlite3") {
+            return callback(null, `commonjs ${request}`);
+          }
+          if (request.startsWith("node:")) {
             return callback(null, `commonjs ${request}`);
           }
           callback();

@@ -63,9 +63,12 @@ export function backupDbFile(reason = "auto") {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupFile = path.join(backupDir, `db_${timestamp}_${reason}.sqlite`);
 
-    // Use native SQLite backup API for consistency
+    // Use native SQLite backup API for consistency.
+    // Store the promise so callers (e.g. restoreDbBackup) can await it
+    // before closing the DB — prevents EBUSY on Windows.
     const db = getDbInstance();
-    db.backup(backupFile)
+    const _backupPromise = db
+      .backup(backupFile)
       .then(() => {
         console.log(`[DB] Backup created: ${backupFile} (${stat.size} bytes)`);
       })
@@ -102,7 +105,7 @@ export function backupDbFile(reason = "auto") {
       files.splice(smallestIdx, 1);
     }
 
-    return { filename: path.basename(backupFile), size: stat.size };
+    return { filename: path.basename(backupFile), size: stat.size, _backupPromise };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[DB] Backup failed:", message);
@@ -197,9 +200,23 @@ export async function restoreDbBackup(backupId: string) {
     throw new Error(`Backup file is corrupt: ${message}`);
   }
 
-  // Force pre-restore backup (bypass throttle)
+  // Force pre-restore backup (bypass throttle).
+  // Await the async backup so the file handle is released before we unlink.
   _lastBackupAt = 0;
-  backupDbFile("pre-restore");
+  const preRestoreResult = backupDbFile("pre-restore");
+  if (preRestoreResult?._backupPromise) {
+    await preRestoreResult._backupPromise;
+  }
+
+  // On Windows, WAL mode keeps file handles on -shm/-wal that linger after close(),
+  // causing EBUSY when we try to unlink below. Checkpoint and switch to DELETE mode first.
+  try {
+    const db = getDbInstance();
+    db.pragma("wal_checkpoint(TRUNCATE)");
+    db.pragma("journal_mode = DELETE");
+  } catch {
+    /* best-effort */
+  }
 
   // Close and reset current connection
   resetDbInstance();
@@ -212,22 +229,22 @@ export async function restoreDbBackup(backupId: string) {
     throw new Error("SQLITE_FILE is unavailable in local backup restore");
   }
 
-  // Remove main file and WAL sidecars to avoid stale frame replay after restore.
-  const sqliteFilesToReplace = [
-    sqliteFile,
-    `${sqliteFile}-wal`,
-    `${sqliteFile}-shm`,
-    `${sqliteFile}-journal`,
-  ];
-  for (const filePath of sqliteFilesToReplace) {
-    if (!filePath) continue;
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+  // Overwrite the main DB file with the backup.
+  // On Windows, SQLite file handles may linger briefly after close(),
+  // so we copyFile (overwrite) instead of unlink+copy to avoid EBUSY.
+  fs.copyFileSync(backupPath, sqliteFile);
+
+  // Remove WAL sidecars to avoid stale frame replay after restore.
+  for (const suffix of ["-wal", "-shm", "-journal"]) {
+    const sidecarPath = `${sqliteFile}${suffix}`;
+    try {
+      if (fs.existsSync(sidecarPath)) {
+        fs.rmSync(sidecarPath, { force: true, maxRetries: 5, retryDelay: 200 });
+      }
+    } catch {
+      /* best-effort — sidecar may still be locked on Windows */
     }
   }
-
-  // Copy backup over current DB
-  fs.copyFileSync(backupPath, sqliteFile);
 
   // Reopen
   const db = getDbInstance();
