@@ -4,8 +4,7 @@ import { handleChat } from "@/sse/handlers/chat";
 import { initTranslators } from "@omniroute/open-sse/translator/index.ts";
 import { createInjectionGuard } from "@/middleware/promptInjectionGuard";
 import {
-  buildRouteConfig,
-  runWithOutputRuleGuardrail,
+  wrapWithOutputRuleGuardrail,
   type ChatRequestBody,
 } from "@omniroute/open-sse/handlers/outputGuardrailWrapper.ts";
 
@@ -36,9 +35,6 @@ export async function OPTIONS(): Promise<Response> {
 export async function POST(request: Request): Promise<Response> {
   await ensureInitialized();
 
-  // One-line marker for diagnosing 413 / Server-Action interceptions.
-  // Logs only when Content-Length is present so debug noise stays low for
-  // typical chat payloads. Toggle off via OMNIROUTE_LOG_REQUEST_SHAPE=0.
   if (process.env.OMNIROUTE_LOG_REQUEST_SHAPE !== "0") {
     const ct: string = request.headers.get("content-type") ?? "";
     const cl: string | null = request.headers.get("content-length");
@@ -47,7 +43,6 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  // Read body once for both injection guard and output guardrail config.
   let parsedBody: ChatRequestBody | null = null;
   try {
     const cloned = request.clone();
@@ -56,7 +51,6 @@ export async function POST(request: Request): Promise<Response> {
     parsedBody = null;
   }
 
-  // Prompt injection guard — inspect body before forwarding
   try {
     if (parsedBody) {
       const { blocked, result } = injectionGuard(parsedBody);
@@ -78,18 +72,5 @@ export async function POST(request: Request): Promise<Response> {
     console.error("[SECURITY] Prompt injection guard failed:", error);
   }
 
-  const modelHint = parsedBody && typeof parsedBody.model === "string" ? parsedBody.model : "";
-
-  const outputRuleConfig = buildRouteConfig(request.headers, parsedBody, "openai", modelHint);
-
-  if (outputRuleConfig.enabled && parsedBody) {
-    return await runWithOutputRuleGuardrail({
-      request,
-      body: parsedBody,
-      config: outputRuleConfig,
-      handler: (req) => handleChat(req),
-    });
-  }
-
-  return await handleChat(request);
+  return wrapWithOutputRuleGuardrail(request, parsedBody, "openai", (req) => handleChat(req));
 }

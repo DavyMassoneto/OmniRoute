@@ -1,10 +1,14 @@
 import { handleChat } from "@/sse/handlers/chat";
 import { initTranslators } from "@omniroute/open-sse/translator/index.ts";
 import { transformToOllama } from "@omniroute/open-sse/utils/ollamaTransform.ts";
+import {
+  wrapWithOutputRuleGuardrail,
+  type ChatRequestBody,
+} from "@omniroute/open-sse/handlers/outputGuardrailWrapper.ts";
 
 let initialized = false;
 
-async function ensureInitialized() {
+async function ensureInitialized(): Promise<void> {
   if (!initialized) {
     await initTranslators();
     initialized = true;
@@ -12,7 +16,7 @@ async function ensureInitialized() {
   }
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(): Promise<Response> {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -21,16 +25,29 @@ export async function OPTIONS() {
   });
 }
 
-export async function POST(request) {
+export async function POST(request: Request): Promise<Response> {
   await ensureInitialized();
 
-  const clonedReq = request.clone();
+  let parsedBody: ChatRequestBody | null = null;
   let modelName = "llama3.2";
   try {
-    const body = await clonedReq.json();
-    modelName = body.model || "llama3.2";
-  } catch {}
+    const cloned = request.clone();
+    parsedBody = await cloned.json().catch(() => null);
+    if (parsedBody && typeof parsedBody.model === "string" && parsedBody.model.length > 0) {
+      modelName = parsedBody.model;
+    }
+  } catch {
+    parsedBody = null;
+  }
 
-  const response = await handleChat(request);
-  return transformToOllama(response, modelName);
+  // Wrap handleChat with the guardrail (judges OpenAI-format internal
+  // response). Ollama transform runs only on the approved final response so
+  // the client never sees Ollama-shaped tokens for rejected attempts.
+  const guarded = await wrapWithOutputRuleGuardrail(request, parsedBody, "openai", (req) =>
+    handleChat(req)
+  );
+
+  // Guardrail blocked responses are JSON errors — pass through untransformed.
+  if (guarded.status >= 400) return guarded;
+  return transformToOllama(guarded, modelName);
 }

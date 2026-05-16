@@ -1,12 +1,16 @@
 import { handleChat } from "@/sse/handlers/chat";
 import { initTranslators } from "@omniroute/open-sse/translator/index.ts";
+import {
+  wrapWithOutputRuleGuardrail,
+  type ChatRequestBody,
+} from "@omniroute/open-sse/handlers/outputGuardrailWrapper.ts";
 
 let initialized = false;
 
 /**
  * Initialize translators once
  */
-async function ensureInitialized() {
+async function ensureInitialized(): Promise<void> {
   if (!initialized) {
     await initTranslators();
     initialized = true;
@@ -17,7 +21,7 @@ async function ensureInitialized() {
 /**
  * Handle CORS preflight
  */
-export async function OPTIONS() {
+export async function OPTIONS(): Promise<Response> {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -29,7 +33,16 @@ export async function OPTIONS() {
 /**
  * POST /v1/messages - Claude format (auto convert via handleChat)
  */
-export async function POST(request) {
+export async function POST(request: Request): Promise<Response> {
   await ensureInitialized();
-  return await handleChat(request);
+
+  let parsedBody: ChatRequestBody | null = null;
+  try {
+    const cloned = request.clone();
+    parsedBody = await cloned.json().catch(() => null);
+  } catch {
+    parsedBody = null;
+  }
+
+  return wrapWithOutputRuleGuardrail(request, parsedBody, "claude", (req) => handleChat(req));
 }

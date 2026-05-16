@@ -1,9 +1,13 @@
 import { handleChat } from "@/sse/handlers/chat";
 import { initTranslators } from "@omniroute/open-sse/translator/index.ts";
+import {
+  wrapWithOutputRuleGuardrail,
+  type ChatRequestBody,
+} from "@omniroute/open-sse/handlers/outputGuardrailWrapper.ts";
 
 let initialized = false;
 
-async function ensureInitialized() {
+async function ensureInitialized(): Promise<void> {
   if (!initialized) {
     await initTranslators();
     initialized = true;
@@ -11,7 +15,7 @@ async function ensureInitialized() {
   }
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(): Promise<Response> {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -25,7 +29,18 @@ export async function OPTIONS() {
  * Reuses the shared chat handler so native Codex passthrough can keep
  * arbitrary Responses suffixes all the way to the upstream provider.
  */
-export async function POST(request) {
+export async function POST(request: Request): Promise<Response> {
   await ensureInitialized();
-  return await handleChat(request);
+
+  let parsedBody: ChatRequestBody | null = null;
+  try {
+    const cloned = request.clone();
+    parsedBody = await cloned.json().catch(() => null);
+  } catch {
+    parsedBody = null;
+  }
+
+  return wrapWithOutputRuleGuardrail(request, parsedBody, "openai-responses", (req) =>
+    handleChat(req)
+  );
 }

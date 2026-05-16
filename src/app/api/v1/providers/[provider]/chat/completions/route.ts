@@ -5,10 +5,14 @@ import { HTTP_STATUS } from "@omniroute/open-sse/config/constants.ts";
 import { getRegistryEntry } from "@omniroute/open-sse/config/providerRegistry.ts";
 import { providerChatCompletionSchema } from "@/shared/validation/schemas";
 import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
+import {
+  wrapWithOutputRuleGuardrail,
+  type ChatRequestBody,
+} from "@omniroute/open-sse/handlers/outputGuardrailWrapper.ts";
 
 let initialized = false;
 
-async function ensureInitialized() {
+async function ensureInitialized(): Promise<void> {
   if (!initialized) {
     await initTranslators();
     initialized = true;
@@ -18,7 +22,7 @@ async function ensureInitialized() {
 /**
  * Handle CORS preflight
  */
-export async function OPTIONS() {
+export async function OPTIONS(): Promise<Response> {
   return new Response(null, {
     headers: {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -31,7 +35,10 @@ export async function OPTIONS() {
  * POST /v1/providers/{provider}/chat/completions
  * Routes to the specified provider, validating model/provider match.
  */
-export async function POST(request, { params }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ provider: string }> }
+): Promise<Response> {
   const { provider: rawProvider } = await params;
 
   const providerEntry = getRegistryEntry(rawProvider);
@@ -45,8 +52,7 @@ export async function POST(request, { params }) {
 
   await ensureInitialized();
 
-  // Clone request with provider-prefixed model
-  let rawBody;
+  let rawBody: ChatRequestBody;
   try {
     rawBody = await request.json();
   } catch {
@@ -56,7 +62,7 @@ export async function POST(request, { params }) {
   if (isValidationFailure(validation)) {
     return errorResponse(HTTP_STATUS.BAD_REQUEST, validation.error.message);
   }
-  const body = validation.data;
+  const body: ChatRequestBody = validation.data;
 
   // Validate model belongs to this provider
   if (body.model) {
@@ -89,5 +95,8 @@ export async function POST(request, { params }) {
     body: JSON.stringify(body),
   });
 
-  return await handleChat(newRequest, buildClientRawRequest(request, rawBody));
+  const clientRaw = buildClientRawRequest(request, rawBody);
+  return wrapWithOutputRuleGuardrail(newRequest, body, "openai", (req) =>
+    handleChat(req, clientRaw)
+  );
 }

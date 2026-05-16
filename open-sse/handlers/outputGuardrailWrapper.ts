@@ -28,6 +28,10 @@ export interface ChatRequestBody {
   messages?: { role: string; content: string }[];
   metadata?: ChatRequestMetadata;
   stream?: boolean;
+  prompt?: string | string[];
+  max_tokens?: number;
+  temperature?: number;
+  top_p?: number;
 }
 
 export interface ChatRequestMetadata {
@@ -42,6 +46,13 @@ interface ResolvedRulesInput {
   judgeModel: string;
   maxRetries: number;
   failClosed: boolean;
+}
+
+export interface RunWithGuardrailOptions {
+  request: Request;
+  body: ChatRequestBody;
+  config: OutputRuleRouteConfig;
+  handler: (request: Request) => Promise<Response>;
 }
 
 const DEFAULT_MAX_RETRIES = 3;
@@ -200,11 +211,17 @@ function buildGuardrailErrorResponse(message: string): Response {
   );
 }
 
-export interface RunWithGuardrailOptions {
-  request: Request;
-  body: ChatRequestBody;
-  config: OutputRuleRouteConfig;
-  handler: (request: Request) => Promise<Response>;
+export async function wrapWithOutputRuleGuardrail(
+  request: Request,
+  body: ChatRequestBody | null,
+  targetFormat: string,
+  handler: (request: Request) => Promise<Response>
+): Promise<Response> {
+  if (!body) return handler(request);
+  const modelHint = typeof body.model === "string" ? body.model : "";
+  const config = buildRouteConfig(request.headers, body, targetFormat, modelHint);
+  if (!config.enabled || !config.judgeClient) return handler(request);
+  return runWithOutputRuleGuardrail({ request, body, config, handler });
 }
 
 export async function runWithOutputRuleGuardrail(
