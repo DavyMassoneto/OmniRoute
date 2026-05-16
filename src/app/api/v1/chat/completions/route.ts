@@ -3,8 +3,13 @@ import { callCloudWithMachineId } from "@/shared/utils/cloud";
 import { handleChat } from "@/sse/handlers/chat";
 import { initTranslators } from "@omniroute/open-sse/translator/index.ts";
 import { createInjectionGuard } from "@/middleware/promptInjectionGuard";
+import {
+  buildRouteConfig,
+  runWithOutputRuleGuardrail,
+  type ChatRequestBody,
+} from "@omniroute/open-sse/handlers/outputGuardrailWrapper.ts";
 
-let initPromise = null;
+let initPromise: Promise<void> | null = null;
 
 // Singleton injection guard instance
 const injectionGuard = createInjectionGuard();
@@ -12,7 +17,7 @@ const injectionGuard = createInjectionGuard();
 /**
  * Initialize translators once (Promise-based singleton — no race condition)
  */
-function ensureInitialized() {
+function ensureInitialized(): Promise<void> {
   if (!initPromise) {
     initPromise = Promise.resolve(initTranslators()).then(() => {
       console.log("[SSE] Translators initialized");
@@ -24,30 +29,37 @@ function ensureInitialized() {
 /**
  * Handle CORS preflight
  */
-export async function OPTIONS() {
+export async function OPTIONS(): Promise<Response> {
   return handleCorsOptions();
 }
 
-export async function POST(request) {
+export async function POST(request: Request): Promise<Response> {
   await ensureInitialized();
 
   // One-line marker for diagnosing 413 / Server-Action interceptions.
   // Logs only when Content-Length is present so debug noise stays low for
   // typical chat payloads. Toggle off via OMNIROUTE_LOG_REQUEST_SHAPE=0.
   if (process.env.OMNIROUTE_LOG_REQUEST_SHAPE !== "0") {
-    const ct = request.headers.get("content-type") ?? "";
-    const cl = request.headers.get("content-length");
+    const ct: string = request.headers.get("content-type") ?? "";
+    const cl: string | null = request.headers.get("content-length");
     if (cl && Number(cl) > 256 * 1024) {
       console.error(`[CHAT-ROUTE] large body content-type="${ct}" content-length=${cl}`);
     }
   }
 
-  // Prompt injection guard — inspect body before forwarding
+  // Read body once for both injection guard and output guardrail config.
+  let parsedBody: ChatRequestBody | null = null;
   try {
     const cloned = request.clone();
-    const body = await cloned.json().catch(() => null);
-    if (body) {
-      const { blocked, result } = injectionGuard(body);
+    parsedBody = await cloned.json().catch(() => null);
+  } catch {
+    parsedBody = null;
+  }
+
+  // Prompt injection guard — inspect body before forwarding
+  try {
+    if (parsedBody) {
+      const { blocked, result } = injectionGuard(parsedBody);
       if (blocked) {
         return new Response(
           JSON.stringify({
@@ -64,6 +76,19 @@ export async function POST(request) {
     }
   } catch (error) {
     console.error("[SECURITY] Prompt injection guard failed:", error);
+  }
+
+  const modelHint = parsedBody && typeof parsedBody.model === "string" ? parsedBody.model : "";
+
+  const outputRuleConfig = buildRouteConfig(request.headers, parsedBody, "openai", modelHint);
+
+  if (outputRuleConfig.enabled && parsedBody) {
+    return await runWithOutputRuleGuardrail({
+      request,
+      body: parsedBody,
+      config: outputRuleConfig,
+      handler: (req) => handleChat(req),
+    });
   }
 
   return await handleChat(request);
