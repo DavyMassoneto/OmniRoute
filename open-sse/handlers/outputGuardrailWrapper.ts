@@ -41,11 +41,20 @@ export interface ChatRequestMetadata {
   output_rule_fail_closed?: boolean;
 }
 
+export interface OutputRuleDbSettings {
+  outputRuleEnabled?: boolean;
+  outputRuleRules?: string | string[];
+  outputRuleJudgeModel?: string;
+  outputRuleMaxRetries?: number;
+  outputRuleFailClosed?: boolean;
+}
+
 interface ResolvedRulesInput {
   rules: string[];
   judgeModel: string;
   maxRetries: number;
   failClosed: boolean;
+  disabledByDb: boolean;
 }
 
 export interface RunWithGuardrailOptions {
@@ -87,9 +96,40 @@ function readBool(value: string | undefined): boolean | null {
   return null;
 }
 
+async function loadDbSettings(): Promise<OutputRuleDbSettings | null> {
+  try {
+    const mod = await import("@/lib/db/settings");
+    const settings = await mod.getSettings();
+    if (!settings || typeof settings !== "object") return null;
+    return {
+      outputRuleEnabled:
+        typeof settings.outputRuleEnabled === "boolean" ? settings.outputRuleEnabled : undefined,
+      outputRuleRules:
+        typeof settings.outputRuleRules === "string" || Array.isArray(settings.outputRuleRules)
+          ? settings.outputRuleRules
+          : undefined,
+      outputRuleJudgeModel:
+        typeof settings.outputRuleJudgeModel === "string"
+          ? settings.outputRuleJudgeModel
+          : undefined,
+      outputRuleMaxRetries:
+        typeof settings.outputRuleMaxRetries === "number"
+          ? settings.outputRuleMaxRetries
+          : undefined,
+      outputRuleFailClosed:
+        typeof settings.outputRuleFailClosed === "boolean"
+          ? settings.outputRuleFailClosed
+          : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function resolveOutputRuleConfig(
   headers: Headers,
-  body: ChatRequestBody | null
+  body: ChatRequestBody | null,
+  dbSettings: OutputRuleDbSettings | null
 ): ResolvedRulesInput {
   const headerRules = readHeader(headers, "x-omniroute-output-rules");
   const bodyMetadata = body?.metadata;
@@ -97,14 +137,17 @@ export function resolveOutputRuleConfig(
     typeof bodyMetadata?.output_rules === "string" || Array.isArray(bodyMetadata?.output_rules)
       ? bodyMetadata.output_rules
       : undefined;
+  const dbRules = dbSettings?.outputRuleRules;
   const envRules = process.env.OUTPUT_RULE_RULES;
 
   const fromHeader = parseRulesList(headerRules);
   const fromBody = parseRulesList(bodyRules);
+  const fromDb = parseRulesList(dbRules);
   const fromEnv = parseRulesList(envRules);
   let finalRules: string[] = [];
   if (fromHeader.length > 0) finalRules = fromHeader;
   else if (fromBody.length > 0) finalRules = fromBody;
+  else if (fromDb.length > 0) finalRules = fromDb;
   else finalRules = fromEnv;
 
   const judgeModel =
@@ -112,6 +155,7 @@ export function resolveOutputRuleConfig(
     (typeof bodyMetadata?.output_rule_judge_model === "string"
       ? bodyMetadata.output_rule_judge_model
       : "") ||
+    dbSettings?.outputRuleJudgeModel ||
     process.env.OUTPUT_RULE_JUDGE_MODEL ||
     "";
 
@@ -120,10 +164,13 @@ export function resolveOutputRuleConfig(
     typeof bodyMetadata?.output_rule_max_retries === "number"
       ? bodyMetadata.output_rule_max_retries
       : null;
+  const maxRetriesDb =
+    typeof dbSettings?.outputRuleMaxRetries === "number" ? dbSettings.outputRuleMaxRetries : null;
   const maxRetriesEnv = readNumber(process.env.OUTPUT_RULE_MAX_RETRIES);
   let maxRetries = DEFAULT_MAX_RETRIES;
   if (maxRetriesHeader !== null) maxRetries = maxRetriesHeader;
   else if (maxRetriesBody !== null) maxRetries = maxRetriesBody;
+  else if (maxRetriesDb !== null) maxRetries = maxRetriesDb;
   else if (maxRetriesEnv !== null) maxRetries = maxRetriesEnv;
 
   const failClosedHeader = readBool(readHeader(headers, "x-omniroute-output-rule-fail-closed"));
@@ -131,17 +178,28 @@ export function resolveOutputRuleConfig(
     typeof bodyMetadata?.output_rule_fail_closed === "boolean"
       ? bodyMetadata.output_rule_fail_closed
       : null;
+  const failClosedDb =
+    typeof dbSettings?.outputRuleFailClosed === "boolean" ? dbSettings.outputRuleFailClosed : null;
   const failClosedEnv = readBool(process.env.OUTPUT_RULE_FAIL_CLOSED);
   let failClosed = false;
   if (failClosedHeader !== null) failClosed = failClosedHeader;
   else if (failClosedBody !== null) failClosed = failClosedBody;
+  else if (failClosedDb !== null) failClosed = failClosedDb;
   else if (failClosedEnv !== null) failClosed = failClosedEnv;
+
+  // Master toggle: when DB explicitly says disabled and no per-request override
+  // (header/body) provided rules, treat the whole feature as off — even if env
+  // var or DB rules are populated. This lets the UI toggle act as a kill switch
+  // without erasing the saved rules.
+  const disabledByDb =
+    dbSettings?.outputRuleEnabled === false && fromHeader.length === 0 && fromBody.length === 0;
 
   return {
     rules: finalRules,
     judgeModel,
     maxRetries: Math.max(0, Math.floor(maxRetries)),
     failClosed,
+    disabledByDb,
   };
 }
 
@@ -164,14 +222,16 @@ function buildJudgeClient(): JudgeClient {
   });
 }
 
-export function buildRouteConfig(
+export async function buildRouteConfig(
   headers: Headers,
   body: ChatRequestBody | null,
   targetFormat: string,
   modelHint: string
-): OutputRuleRouteConfig {
-  const resolved = resolveOutputRuleConfig(headers, body);
-  const enabled = resolved.rules.length > 0 && resolved.judgeModel.length > 0;
+): Promise<OutputRuleRouteConfig> {
+  const dbSettings = await loadDbSettings();
+  const resolved = resolveOutputRuleConfig(headers, body, dbSettings);
+  const enabled =
+    !resolved.disabledByDb && resolved.rules.length > 0 && resolved.judgeModel.length > 0;
   return {
     enabled,
     rules: resolved.rules,
@@ -219,7 +279,7 @@ export async function wrapWithOutputRuleGuardrail(
 ): Promise<Response> {
   if (!body) return handler(request);
   const modelHint = typeof body.model === "string" ? body.model : "";
-  const config = buildRouteConfig(request.headers, body, targetFormat, modelHint);
+  const config = await buildRouteConfig(request.headers, body, targetFormat, modelHint);
   if (!config.enabled || !config.judgeClient) return handler(request);
   return runWithOutputRuleGuardrail({ request, body, config, handler });
 }

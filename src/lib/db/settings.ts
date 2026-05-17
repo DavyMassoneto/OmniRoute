@@ -102,6 +102,11 @@ export async function getSettings() {
     idempotencyWindowMs: 5000,
     wsAuth: false,
     maxBodySizeMb: requestBodyLimitMbFromEnv(process.env.MAX_BODY_SIZE_BYTES),
+    outputRuleEnabled: false,
+    outputRuleRules: "",
+    outputRuleJudgeModel: "",
+    outputRuleMaxRetries: 3,
+    outputRuleFailClosed: false,
   };
   for (const row of rows) {
     const record = toRecord(row);
