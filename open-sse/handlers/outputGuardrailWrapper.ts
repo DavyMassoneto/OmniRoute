@@ -278,6 +278,12 @@ export async function wrapWithOutputRuleGuardrail(
   handler: (request: Request) => Promise<Response>
 ): Promise<Response> {
   if (!body) return handler(request);
+  // Bypass the guardrail for internal judge calls — without this, the judge
+  // re-enters this wrapper, fires its own judge call, and loops until the
+  // upstream errors out.
+  if (request.headers.get("x-omniroute-internal-judge") === "1") {
+    return handler(request);
+  }
   const modelHint = typeof body.model === "string" ? body.model : "";
   const config = await buildRouteConfig(request.headers, body, targetFormat, modelHint);
   if (!config.enabled || !config.judgeClient) return handler(request);

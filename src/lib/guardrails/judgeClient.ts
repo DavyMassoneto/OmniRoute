@@ -135,14 +135,20 @@ export class OpenAICompatJudgeClient implements JudgeClient {
     const headers = new Headers();
     headers.set("content-type", "application/json");
     if (this.apiKey) headers.set("authorization", `Bearer ${this.apiKey}`);
+    // Mark this request as an internal judge call so the route-level wrapper
+    // can bypass its own guardrail and avoid infinite recursion (judge would
+    // otherwise re-enter wrapWithOutputRuleGuardrail and call itself again).
+    headers.set("x-omniroute-internal-judge", "1");
 
+    // Note: no temperature/top_p — some upstream OAuth paths (Claude Code,
+    // adaptive thinking modes) reject `temperature: 0`. The judge prompt is
+    // strict enough that we rely on the model's default sampling.
     const requestBody = JSON.stringify({
       model: call.model,
       messages: [
         { role: "system", content: this.systemPrompt },
         { role: "user", content: buildUserPrompt(call.rules, call.content) },
       ],
-      temperature: 0,
       stream: false,
     });
 
