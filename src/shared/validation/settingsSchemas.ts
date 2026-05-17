@@ -109,6 +109,14 @@ export const updateSettingsSchema = z.object({
   autoRoutingDefaultVariant: z
     .enum(["lkgp", "coding", "fast", "cheap", "offline", "smart"])
     .optional(),
+  // Output-rule guardrail (UI persistence — read by openSse/handlers/outputGuardrailWrapper.ts)
+  outputRuleEnabled: z.boolean().optional(),
+  outputRuleRules: z
+    .union([z.string().max(50000), z.array(z.string().max(2000)).max(200)])
+    .optional(),
+  outputRuleJudgeModel: z.string().max(200).optional(),
+  outputRuleMaxRetries: z.number().int().min(0).max(10).optional(),
+  outputRuleFailClosed: z.boolean().optional(),
 });
 
 export const databaseSettingsSchema = z.object(
