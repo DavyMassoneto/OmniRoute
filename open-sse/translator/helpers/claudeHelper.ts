@@ -6,6 +6,74 @@ import { NON_ANTHROPIC_THINKING_PLACEHOLDER } from "../../utils/reasoningPlaceho
 import { sanitizeToolId } from "./schemaCoercion.ts";
 import { isRestoredClaudeThinkingBlock } from "../../services/claudeThinkingStore.ts";
 
+/**
+ * The DEFAULT blob is a real encrypted thought from an unrelated
+ * session; Claude decrypts it as its own reasoning. Drop every thinking-ish block Anthropic
+ * never issued (no signature/data, or the blob itself) instead of replaying the blob.
+ * Docs (build-with-claude/thinking, "Thinking with tool use"): adaptive mode needs no
+ * thinking block on any assistant turn; manual mode needs one on the final assistant
+ * turn, so when that turn has none, thinking is disabled for this request.
+ */
+function isUnsignedAnthropicThinking(block: ClaudeContentBlock): boolean {
+  if (!block || typeof block !== "object") return false;
+  if (block.type === "thinking") {
+    const sig = block.signature;
+    return !(
+      typeof sig === "string" &&
+      sig.length > 0 &&
+      sig !== DEFAULT_THINKING_CLAUDE_SIGNATURE
+    );
+  }
+  if (block.type === "redacted_thinking") {
+    const data = block.data;
+    return !(
+      typeof data === "string" &&
+      data.length > 0 &&
+      data !== DEFAULT_THINKING_CLAUDE_SIGNATURE
+    );
+  }
+  return false;
+}
+
+export function disableManualThinkingWithoutFinalBlock(body: ClaudeRequestBody): void {
+  const messages = body.messages;
+  if (!Array.isArray(messages) || body.thinking?.type !== "enabled") return;
+  if (messages[messages.length - 1]?.role !== "user") return;
+  for (let k = messages.length - 1; k >= 0; k--) {
+    const msg = messages[k];
+    if (msg?.role !== "assistant") continue;
+    const content = Array.isArray(msg.content) ? msg.content : [];
+    const hasToolUse = content.some((b: ClaudeContentBlock) => b?.type === "tool_use");
+    const hasThinking = content.some(
+      (b: ClaudeContentBlock) => b?.type === "thinking" || b?.type === "redacted_thinking"
+    );
+    if (hasToolUse && !hasThinking) {
+      delete body.thinking;
+      const cm = body.context_management as { edits?: Array<{ type?: unknown }> } | undefined;
+      if (cm && Array.isArray(cm.edits)) {
+        const edits = cm.edits.filter((e) => !String(e?.type || "").startsWith("clear_thinking"));
+        if (edits.length) body.context_management = { ...cm, edits };
+        else delete body.context_management;
+      }
+    }
+    break;
+  }
+}
+
+function dropUnsignedAnthropicThinking(body: ClaudeRequestBody): void {
+  const messages = body.messages;
+  if (!Array.isArray(messages)) return;
+  for (let k = messages.length - 1; k >= 0; k--) {
+    const msg = messages[k];
+    if (!msg || msg.role !== "assistant" || !Array.isArray(msg.content)) continue;
+    if (!msg.content.some(isUnsignedAnthropicThinking)) continue;
+    const kept = msg.content.filter((b: ClaudeContentBlock) => !isUnsignedAnthropicThinking(b));
+    if (kept.length) msg.content = kept;
+    else messages.splice(k, 1);
+  }
+  disableManualThinkingWithoutFinalBlock(body);
+}
+
 export { NON_ANTHROPIC_THINKING_PLACEHOLDER } from "../../utils/reasoningPlaceholder.ts";
 
 // MiniMax exposes a Claude-compatible endpoint but rejects Anthropic's extended
@@ -47,7 +115,7 @@ type ClaudeTool = {
   [key: string]: unknown;
 };
 
-type ClaudeRequestBody = {
+export type ClaudeRequestBody = {
   system?: Array<Record<string, unknown> & { cache_control?: unknown }>;
   messages?: ClaudeMessage[];
   tools?: ClaudeTool[];
@@ -766,10 +834,8 @@ export function prepareClaudeRequest(
               delete block.data;
               delete block.signature;
             } else if (supportsRedactedThinking) {
-              block.type = "redacted_thinking";
-              block.data = DEFAULT_THINKING_CLAUDE_SIGNATURE;
-              delete block.thinking;
-              delete block.signature;
+              // Keep verbatim: genuine signed blocks (e.g. restored by claudeThinkingStore)
+              // must reach Anthropic unchanged; unsigned ones are dropped after this pass.
             } else {
               const existing =
                 typeof block.thinking === "string" && block.thinking.length > 0
@@ -813,10 +879,7 @@ export function prepareClaudeRequest(
         // tool_use. Use the same provider-aware shape selection as above.
         if (thinkingEnabled && !hasThinking && hasToolUse) {
           if (supportsRedactedThinking) {
-            content.unshift({
-              type: "redacted_thinking",
-              data: DEFAULT_THINKING_CLAUDE_SIGNATURE,
-            });
+            // Inject nothing (see dropUnsignedAnthropicThinking below).
           } else if (isKimiCoding) {
             content.unshift({
               type: "thinking",
@@ -841,6 +904,8 @@ export function prepareClaudeRequest(
       }
     }
   }
+
+  if (supportsRedactedThinking) dropUnsignedAnthropicThinking(body);
 
   // 3. Tools: remove all cache_control, add only to the last non-deferred tool
   // Tools with defer_loading=true cannot have cache_control (API rejects it)

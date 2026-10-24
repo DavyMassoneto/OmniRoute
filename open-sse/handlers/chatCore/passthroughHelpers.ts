@@ -2,6 +2,10 @@ import { FORMATS } from "../../translator/formats.ts";
 import { isVerifiedNativeCodexRequest } from "../../config/codexIdentity.ts";
 import { isClaudeCodeCompatibleProvider } from "../../services/claudeCodeCompatible.ts";
 import { downgradeRestoredClaudeThinking } from "../../services/claudeThinkingStore.ts";
+import {
+  disableManualThinkingWithoutFinalBlock,
+  type ClaudeRequestBody,
+} from "../../translator/helpers/claudeHelper.ts";
 import { isResponsesEndpointPath } from "../../utils/responsesEndpoint.ts";
 import { mergeClientAnthropicBeta } from "../../config/anthropicHeaders.ts";
 import { getHeaderValueCaseInsensitive } from "./headers.ts";
@@ -334,7 +338,9 @@ export function stripHistoricalThinkingForSignatureRecovery<T>(body: T): T {
   });
 
   if (!changed) return body;
-  return { ...record, messages: recoveredMessages } as T;
+  const recovered = { ...record, messages: recoveredMessages } as ClaudeRequestBody;
+  disableManualThinkingWithoutFinalBlock(recovered);
+  return recovered as T;
 }
 
 type SignatureRecoveryExecution<T> = {

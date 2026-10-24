@@ -120,19 +120,14 @@ test("#12105: unsigned thinking block on the latest assistant turn with tool_use
     "no `thinking`-typed block may survive on the latest assistant turn"
   );
 
-  // Anthropic's schema still needs a thinking-ish precursor before tool_use when
-  // thinking is enabled; prepareClaudeRequest supplies the signature-less
-  // redacted_thinking placeholder (accepted without signature validation).
+  // No placeholder is injected: the final tool_use turn has no genuine thinking block, so
+  // manual thinking is switched off for this request instead.
   assert.equal(
-    assistant.content[0].type,
-    "redacted_thinking",
-    "precursor must be redacted_thinking"
-  );
-  assert.equal(
-    assistant.content[0].signature,
+    assistant.content.find((b) => b && b.type === "redacted_thinking"),
     undefined,
-    "redacted_thinking must carry no signature"
+    "no redacted_thinking placeholder may be injected"
   );
+  assert.equal(outbound.thinking, undefined, "manual thinking is disabled for this request");
   assert.ok(
     assistant.content.some((b) => b.type === "tool_use"),
     "tool_use block must be preserved"
