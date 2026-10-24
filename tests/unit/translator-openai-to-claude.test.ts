@@ -9,6 +9,8 @@ const {
   stripEmptyTextBlocks,
 } = await import("../../open-sse/translator/request/openai-to-claude.ts");
 const { CLAUDE_SYSTEM_PROMPT } = await import("../../open-sse/config/constants.ts");
+const { DEFAULT_THINKING_CLAUDE_SIGNATURE } =
+  await import("../../open-sse/config/defaultThinkingSignature.ts");
 const { getModelsByProviderId, supportsXHighEffort } =
   await import("../../open-sse/config/providerModels.ts");
 
@@ -202,6 +204,10 @@ test("OpenAI -> Claude converts multimodal content, tool declarations, tool call
     assistantMessage.content.some((b) => b.type === "thinking" || b.type === "redacted_thinking"),
     false
   );
+  assert.equal(assistantMessage.content.length, 2);
+  assert.equal(JSON.stringify(assistantMessage).includes(DEFAULT_THINKING_CLAUDE_SIGNATURE), false);
+  assert.equal(assistantMessage.content[0].signature, undefined);
+  assert.equal(assistantMessage.content[0].data, undefined);
   assert.equal(assistantMessage.content[0].text, "Calling tool");
   assert.equal(assistantMessage.content[1].type, "tool_use");
   assert.equal(assistantMessage.content[1].name, `${CLAUDE_OAUTH_TOOL_PREFIX}weather.get`);
@@ -625,6 +631,8 @@ test("OpenAI -> Claude preserves reasoning_content on assistant tool call messag
   const toolUseBlock = assistantMsg.content.find((b) => b.type === "tool_use");
 
   assert.equal(thinkingBlock, undefined, "must NOT inject a redacted_thinking placeholder");
+  assert.equal(JSON.stringify(assistantMsg).includes(DEFAULT_THINKING_CLAUDE_SIGNATURE), false);
+  assert.equal(assistantMsg.content.length, 2, "only the text and tool_use blocks remain");
   assert.equal(
     assistantMsg.content.find((b) => b.type === "thinking"),
     undefined,

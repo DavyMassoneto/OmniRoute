@@ -48,6 +48,7 @@ test("opencode-go + claude-format model (minimax-m3) → no synthetic redacted_t
   );
   const content = (result as any).messages[1].content;
   assert.equal(content[0].type, "tool_use", "no foreign placeholder is injected");
+  assert.equal(content.length, 1, "tool_use is the only block");
   assert.equal(JSON.stringify(result).includes(DEFAULT_THINKING_CLAUDE_SIGNATURE), false);
 });
 

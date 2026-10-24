@@ -51,6 +51,8 @@ test("claude provider — empty content, injects nothing and disables manual thi
   const content = (result as any).messages[1].content;
   assert.equal(content.length, 1);
   assert.equal(content[0].type, "tool_use");
+  assert.equal(content[0].data, undefined);
+  assert.equal(JSON.stringify(result).includes(DEFAULT_THINKING_CLAUDE_SIGNATURE), false);
   assert.equal(result.thinking, undefined, "manual thinking off without a final block");
 });
 
@@ -86,6 +88,8 @@ test("claude provider — genuine signed thinking is kept verbatim on older mess
   assert.equal(olderContent[0].type, "thinking");
   assert.equal(olderContent[0].thinking, "real thinking text");
   assert.equal(olderContent[0].signature, "client-stored-sig");
+  assert.equal(olderContent[0].data, undefined);
+  assert.equal(JSON.stringify(olderContent).includes(DEFAULT_THINKING_CLAUDE_SIGNATURE), false);
   assert.equal(olderContent[1].type, "tool_use");
   // Latest assistant: thinking preserved verbatim
   const latestContent = body.messages[3].content;
@@ -292,6 +296,8 @@ test("preserves genuine signed thinking verbatim on every assistant message", ()
   assert.equal(olderAssistant.content[0].type, "thinking");
   assert.equal(olderAssistant.content[0].thinking, "older thought");
   assert.equal(olderAssistant.content[0].signature, "sig-OLD");
+  assert.equal(olderAssistant.content[0].data, undefined);
+  assert.equal(JSON.stringify(olderAssistant).includes(DEFAULT_THINKING_CLAUDE_SIGNATURE), false);
 
   // Latest assistant thinking: untouched (type, text, signature all preserved)
   assert.equal(latestAssistant.content[0].type, "thinking");

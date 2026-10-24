@@ -146,6 +146,7 @@ test("#5312: reasoning_content + tool_use + thinking ENABLED no longer gets a fa
     "must NOT inject a redacted_thinking placeholder"
   );
   assert.equal(assistant.content[0].type, "tool_use");
+  assert.equal(JSON.stringify(result).includes(DEFAULT_THINKING_CLAUDE_SIGNATURE), false);
   assert.ok(
     assistant.content.some((b) => b.type === "tool_use"),
     "tool_use block must still be present"
