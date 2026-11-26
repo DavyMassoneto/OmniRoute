@@ -930,6 +930,94 @@ async function handleGeminiLiveTranscription(
   }
 }
 
+export type TranscriptionChatHandler = (body: {
+  model: string;
+  stream: boolean;
+  messages: Array<{ role: string; content: unknown[] }>;
+}) => Promise<Response>;
+
+async function handleGeminiChatTranscription(
+  providerConfig: AudioProvider,
+  file: Blob & { name?: unknown },
+  model: string,
+  formData: FormData,
+  chatHandler?: TranscriptionChatHandler | null
+): Promise<Response> {
+  const mimeFormats: Record<string, string> = {
+    "audio/mp4": "m4a",
+    "audio/m4a": "m4a",
+    "audio/x-m4a": "m4a",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/wave": "wav",
+    "audio/ogg": "ogg",
+    "audio/flac": "flac",
+    "audio/x-flac": "flac",
+    "audio/aac": "aac",
+    "audio/x-aac": "aac",
+  };
+  const extension = typeof file.name === "string" ? file.name.split(".").pop()?.toLowerCase() : "";
+  const format = mimeFormats[file.type.toLowerCase().split(";")[0]] || extension || "";
+  if (!providerConfig.supportedFormats?.includes(format)) {
+    return errorResponse(400, `Unsupported audio format: ${format || "unknown"}`);
+  }
+  if (providerConfig.maxInputBytes && file.size > providerConfig.maxInputBytes) {
+    return errorResponse(413, "Audio file is too large for Gemini chat transcription");
+  }
+  if (!chatHandler) return errorResponse(503, "Internal chat transcription handler is unavailable");
+  const language = readFormString(formData, "language") || "pt";
+  const prompt = optionalFormString(formData, "prompt");
+  const instruction = `Return only the verbatim transcription of the audio in ${language === "pt" || language === "pt-BR" ? "Brazilian Portuguese" : language}. Do not add commentary, labels or formatting. Return an empty string if no speech is detected.${prompt ? `\nTranscription context: ${prompt}` : ""}`;
+  try {
+    const response = await chatHandler({
+      model,
+      stream: false,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_audio",
+              input_audio: {
+                data: Buffer.from(await file.arrayBuffer()).toString("base64"),
+                format,
+              },
+            },
+            { type: "text", text: instruction },
+          ],
+        },
+      ],
+    });
+    if (!response.ok) return upstreamErrorResponse(response, await response.text());
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== "string" && content !== null) {
+      return errorResponse(502, "Invalid internal chat transcription response");
+    }
+    const text = content ?? "";
+    const noSpeechDetected = text === "";
+    if (readFormString(formData, "response_format") === "verbose_json") {
+      return Response.json(
+        { task: "transcribe", language, duration: 0, text, segments: [], noSpeechDetected },
+        { headers: { ...CORS_HEADERS } }
+      );
+    }
+    return Response.json({ text, noSpeechDetected }, { headers: { ...CORS_HEADERS } });
+  } catch (err) {
+    const error = err as { status?: number; message?: string };
+    const status =
+      typeof error?.status === "number" && error.status >= 400 && error.status <= 599
+        ? error.status
+        : 502;
+    return audioErrorResponse(
+      status,
+      `Gemini chat transcription failed: ${error?.message || "unknown error"}`
+    );
+  }
+}
+
 function resolveTranscriptionToken(
   providerConfig: AudioProvider,
   credentials?: TranscriptionCredentials | null
@@ -953,6 +1041,7 @@ export async function handleAudioTranscription({
   resolvedModel = null,
   remoteMediaFetcher = null,
   signal = null,
+  chatHandler = null,
 }: {
   formData: FormData;
   credentials?: TranscriptionCredentials | null;
@@ -962,6 +1051,7 @@ export async function handleAudioTranscription({
   remoteMediaFetcher?: RemoteMediaFetcher | null;
   /** Client request abort signal; kills spawned helpers (Gemini Live ffmpeg) on disconnect. */
   signal?: AbortSignal | null;
+  chatHandler?: TranscriptionChatHandler | null;
 }): Promise<Response> {
   const model = formData.get("model");
   if (typeof model !== "string" || !model) {
@@ -994,9 +1084,13 @@ export async function handleAudioTranscription({
     );
   }
 
-  // Skip credential check for local providers (authType: "none")
+  const isGeminiChat = providerConfig.format === "gemini-chat";
+  if (isGeminiChat && !providerConfig.models.some((entry) => entry.id === modelId)) {
+    return errorResponse(400, `Invalid transcription model: ${model}. Use format: provider/model`);
+  }
+  // Chat owns provider credential selection, quota and caller policy enforcement.
   const token = resolveTranscriptionToken(providerConfig, credentials);
-  if (providerConfig.authType !== "none" && !token) {
+  if (!isGeminiChat && providerConfig.authType !== "none" && !token) {
     return errorResponse(401, `No credentials for transcription provider: ${providerConfig.id}`);
   }
 
@@ -1010,6 +1104,15 @@ export async function handleAudioTranscription({
   const file = resolvedFile.file;
 
   // Route to provider-specific handler
+  if (isGeminiChat) {
+    return handleGeminiChatTranscription(
+      providerConfig,
+      file,
+      `${providerConfig.id}/${modelId}`,
+      formData,
+      chatHandler
+    );
+  }
   if (providerConfig.format === "gemini-live") {
     return handleGeminiLiveTranscription(
       providerConfig,

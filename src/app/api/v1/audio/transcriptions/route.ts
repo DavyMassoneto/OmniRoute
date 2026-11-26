@@ -1,7 +1,11 @@
 // Allow large audio/video file uploads — 5min for processing large files (up to 2GB)
 export const maxDuration = 300;
 import { getRequestedModelEndpointMismatch } from "@/lib/providerModels/modelEndpointGuard";
-import { handleAudioTranscription } from "@omniroute/open-sse/handlers/audioTranscription.ts";
+import {
+  handleAudioTranscription,
+  type TranscriptionChatHandler,
+} from "@omniroute/open-sse/handlers/audioTranscription.ts";
+import { handleChat } from "@/sse/handlers/chat";
 import { fetchRemoteMedia } from "@/shared/network/remoteImageFetch";
 import {
   getProviderCredentialsWithQuotaPreflight,
@@ -105,7 +109,8 @@ async function transcribeWithModel(
   apiKeyId?: string | null,
   apiKeyName?: string | null,
   allowedConnections: string[] | null = null,
-  signal: AbortSignal | null = null
+  signal: AbortSignal | null = null,
+  chatHandler: TranscriptionChatHandler | null = null
 ): Promise<Response> {
   // Provider nodes eligible for transcription: this route's own audio type plus
   // general chat/responses gateways. Remote hosts are opt-in (default OFF).
@@ -133,6 +138,18 @@ async function transcribeWithModel(
   // Check provider config — hardcoded first, then dynamic
   let providerConfig =
     getTranscriptionProvider(provider) || dynamicProviders.find((dp) => dp.id === provider) || null;
+
+  // Chat selects credentials and accounts usage once under the original caller.
+  if (providerConfig?.format === "gemini-chat") {
+    return handleAudioTranscription({
+      formData,
+      resolvedProvider: providerConfig,
+      resolvedModel,
+      remoteMediaFetcher: fetchRemoteMedia,
+      signal,
+      chatHandler,
+    });
+  }
 
   // Get credentials — skip for local providers (authType: "none").
   // A dynamic node is addressed by its prefix but stores connections under the node
@@ -282,7 +299,8 @@ async function transcribeWithAlias(
   apiKeyName: string | null,
   apiKey: string | null,
   allowedConnections: string[] | null,
-  signal: AbortSignal | null = null
+  signal: AbortSignal | null = null,
+  chatHandler: TranscriptionChatHandler | null = null
 ) {
   const resolvedModel = await resolveTranscriptionAlias(modelStr);
   if (
@@ -300,7 +318,8 @@ async function transcribeWithAlias(
     apiKeyId,
     apiKeyName,
     allowedConnections,
-    signal
+    signal,
+    chatHandler
   );
 }
 
@@ -340,6 +359,21 @@ export async function POST(request) {
   const scope = await resolveKeyConnectionScope(policy.apiKeyInfo);
   if (scope.rejection) return scope.rejection;
   const { allowedConnections } = scope;
+  const chatHandler: TranscriptionChatHandler = async (body) => {
+    const headers = new Headers(request.headers);
+    headers.set("content-type", "application/json");
+    headers.delete("content-length");
+    // The multipart model is already policy-checked; do not let chat's routing
+    // override header silently redirect the transcription to another model.
+    headers.delete("x-route-model");
+    const chatRequest = new Request(new URL("/v1/chat/completions", request.url), {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: request.signal,
+    });
+    return handleChat(chatRequest, null, null);
+  };
 
   // A bare name (no "/") may be a combo. /v1/models advertises combos, and chat and
   // embeddings both resolve them — resolving here too keeps the catalog honest and
@@ -368,7 +402,8 @@ export async function POST(request) {
               apiKeyId,
               apiKeyName,
               allowedConnections,
-              request.signal ?? null
+              request.signal ?? null,
+              chatHandler
             ),
           isModelAvailable: createComboTargetKeyGate(policy, modelStr),
           log,
@@ -391,6 +426,7 @@ export async function POST(request) {
     apiKeyName,
     policy.apiKey,
     allowedConnections,
-    request.signal ?? null
+    request.signal ?? null,
+    chatHandler
   );
 }
