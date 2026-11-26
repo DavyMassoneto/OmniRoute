@@ -15,6 +15,15 @@ import {
   toRegistryTranscriptionModels as toSyntxTranscriptionModels,
 } from "../services/syntxMediaCatalog.ts";
 
+import { GEMINI_LIVE_MAX_INPUT_BYTES } from "../executors/geminiLiveTranscribe.ts";
+
+const GEMINI_CHAT_TRANSCRIPTION_MODELS = [
+  { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash Low" },
+  { id: "gemini-3.8-flash-medium", name: "Gemini 3.8 Flash Medium" },
+  { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash High" },
+  { id: "gemini-3-flash", name: "Gemini 3 Flash" },
+];
+
 interface AudioModel {
   id: string;
   name: string;
@@ -36,6 +45,7 @@ export interface AudioProvider {
   authHeader: string;
   format?: string;
   supportedFormats?: string[];
+  maxInputBytes?: number;
   async?: boolean;
   /**
    * Voice sent by the OpenAI-compatible speech path when the request omits `voice`.
@@ -329,6 +339,28 @@ export const AUDIO_TRANSCRIPTION_PROVIDERS: Record<string, AudioProvider> = {
     // tagged audio-transcriptions keep having no adapter (#16929).
     modelScoped: true,
     models: [{ id: "gemini-3.5-transcribe-live", name: "Gemini 3.5 Transcribe Live" }],
+  },
+  agy: {
+    id: "agy",
+    baseUrl: "",
+    authType: "oauth",
+    authHeader: "bearer",
+    format: "gemini-chat",
+    modelScoped: true,
+    maxInputBytes: GEMINI_LIVE_MAX_INPUT_BYTES,
+    supportedFormats: ["m4a", "mp3", "wav", "ogg", "flac", "aac"],
+    models: GEMINI_CHAT_TRANSCRIPTION_MODELS,
+  },
+  antigravity: {
+    id: "antigravity",
+    baseUrl: "",
+    authType: "oauth",
+    authHeader: "bearer",
+    format: "gemini-chat",
+    modelScoped: true,
+    maxInputBytes: GEMINI_LIVE_MAX_INPUT_BYTES,
+    supportedFormats: ["m4a", "mp3", "wav", "ogg", "flac", "aac"],
+    models: GEMINI_CHAT_TRANSCRIPTION_MODELS,
   },
 };
 
